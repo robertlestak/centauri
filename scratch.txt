@@ -1,0 +1,29 @@
+
+openssl genrsa -out ~/Desktop/private-key.pem 3072
+openssl rsa -in ~/Desktop/private-key.pem -pubout -out ~/Desktop/pub.pub
+
+
+PUBKEYID=`cat ~/Desktop/pub.pub | shasum -a 256 | awk '{print $1}'`
+
+
+TIMESTAMP=`date +%s`
+TSJ='{"timestamp":'$TIMESTAMP'}'
+SIG=`echo -n $TSJ | openssl dgst -sha256 -sign ~/Desktop/private-key.pem -out /dev/stdout /dev/stdin | base64`
+PUBKEY=`base64 ~/Desktop/pub.pub`
+DATA=`echo -n $TSJ | base64`
+JD='{"public_key":"'$PUBKEY'","data":"'$DATA'","signature":"'$SIG'"}'
+SIG=`echo $JD | base64`
+
+
+curl -X LIST "localhost:8081/message/$PUBKEYID/meta" -H "X-Signature: $SIG"
+
+curl -X GET "localhost:8081/message/$PUBKEYID/83e7ab0a-2a92-4b8b-96d4-6d0f444efa72" -H "X-Signature: $SIG"
+
+curl -X GET "localhost:8082/message/$PUBKEYID/0f1c4ae2-c5c0-458c-8550-4aff0411f3d7" -H "X-Signature: $SIG" | openssl rsautl -decrypt -oaep -inkey ~/Desktop/private-key.pem
+
+
+
+curl -X GET "localhost:8081/message/$PUBKEYID/0eca2fe7-200d-4e97-9c9e-9c24ecaa1254" -H "X-Signature: $SIG"
+curl -X DELETE "localhost:8080/message/$PUBKEYID/acb21598-b778-42a4-b1f7-ddeecbb6084d" -H "X-Signature: $SIG"
+
+curl 'localhost:8080/message' -d '{"type": "message", "public_key_id": "'$PUBKEYID'", "data": "'`echo hello | openssl rsautl -encrypt -oaep -pubin -inkey ~/Desktop/pub.pub | base64`'"}'
