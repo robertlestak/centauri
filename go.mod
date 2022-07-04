@@ -1,4 +1,4 @@
-module github.com/robertlestak/mp
+module github.com/robertlestak/centauri
 
 go 1.18
 

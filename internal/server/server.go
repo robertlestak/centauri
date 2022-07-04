@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/robertlestak/mp/internal/keys"
-	"github.com/robertlestak/mp/internal/sign"
-	"github.com/robertlestak/mp/pkg/message"
+	"github.com/robertlestak/centauri/internal/keys"
+	"github.com/robertlestak/centauri/internal/sign"
+	"github.com/robertlestak/centauri/pkg/message"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robertlestak/mp/internal/persist"
+	"github.com/robertlestak/centauri/internal/persist"
 	log "github.com/sirupsen/logrus"
 )
 

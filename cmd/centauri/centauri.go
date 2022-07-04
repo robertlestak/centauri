@@ -7,13 +7,13 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/robertlestak/mp/internal/agent"
-	"github.com/robertlestak/mp/internal/events"
-	"github.com/robertlestak/mp/internal/keys"
-	"github.com/robertlestak/mp/internal/net"
-	"github.com/robertlestak/mp/internal/persist"
-	"github.com/robertlestak/mp/internal/server"
-	"github.com/robertlestak/mp/pkg/message"
+	"github.com/robertlestak/centauri/internal/agent"
+	"github.com/robertlestak/centauri/internal/events"
+	"github.com/robertlestak/centauri/internal/keys"
+	"github.com/robertlestak/centauri/internal/net"
+	"github.com/robertlestak/centauri/internal/persist"
+	"github.com/robertlestak/centauri/internal/server"
+	"github.com/robertlestak/centauri/pkg/message"
 	log "github.com/sirupsen/logrus"
 )
 

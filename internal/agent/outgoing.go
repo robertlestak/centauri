@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/robertlestak/mp/internal/persist"
-	"github.com/robertlestak/mp/pkg/message"
+	"github.com/robertlestak/centauri/internal/persist"
+	"github.com/robertlestak/centauri/pkg/message"
 	log "github.com/sirupsen/logrus"
 )
 

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/robertlestak/mp/internal/keys"
+	"github.com/robertlestak/centauri/internal/keys"
 )
 
 type SignedRequest struct {

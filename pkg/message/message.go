@@ -6,9 +6,9 @@ import (
 	"io/ioutil"
 
 	"github.com/google/uuid"
-	"github.com/robertlestak/mp/internal/events"
-	"github.com/robertlestak/mp/internal/keys"
-	"github.com/robertlestak/mp/internal/persist"
+	"github.com/robertlestak/centauri/internal/events"
+	"github.com/robertlestak/centauri/internal/keys"
+	"github.com/robertlestak/centauri/internal/persist"
 	log "github.com/sirupsen/logrus"
 )
 
