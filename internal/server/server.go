@@ -46,6 +46,7 @@ func HandleListMesageMetaForPublicKey(w http.ResponseWriter, r *http.Request) {
 	l.Info("listing message meta for public key")
 	vars := mux.Vars(r)
 	keyID := vars["keyID"]
+	channel := r.URL.Query().Get("channel")
 	pubKeyID, err := ValidateSignedRequest(r)
 	if err != nil {
 		l.Errorf("error validating signed request: %v", err)
@@ -57,7 +58,8 @@ func HandleListMesageMetaForPublicKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "key id mismatch", http.StatusBadRequest)
 		return
 	}
-	messages, err := message.ListMessageMetaForPubKeyID(keyID)
+	l.Infof("listing message meta for public key: %v", keyID)
+	messages, err := message.ListMessageMetaForPubKeyID(keyID, channel)
 	if err != nil {
 		l.Errorf("error listing message meta for public key: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -78,6 +80,7 @@ func HandleGetMessageByID(w http.ResponseWriter, r *http.Request) {
 	l.Info("getting message by id")
 	vars := mux.Vars(r)
 	id := vars["id"]
+	channel := vars["channel"]
 	keyID := vars["keyID"]
 	pubKeyID, err := ValidateSignedRequest(r)
 	if err != nil {
@@ -90,7 +93,7 @@ func HandleGetMessageByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "key id mismatch", http.StatusBadRequest)
 		return
 	}
-	m, err := message.GetMessageByID(keyID, id)
+	m, err := message.GetMessageByID(keyID, channel, id)
 	if err != nil {
 		l.Errorf("error getting message by id: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -108,6 +111,7 @@ func HandleDeleteMessageByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	keyID := vars["keyID"]
+	channel := vars["channel"]
 	pubKeyID, err := ValidateSignedRequest(r)
 	if err != nil {
 		l.Errorf("error validating signed request: %v", err)
@@ -119,7 +123,7 @@ func HandleDeleteMessageByID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "key id mismatch", http.StatusBadRequest)
 		return
 	}
-	if err := message.DeleteMessageByID(keyID, id, false); err != nil {
+	if err := message.DeleteMessageByID(keyID, channel, id, false); err != nil {
 		l.Errorf("error deleting message by id: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -232,8 +236,8 @@ func Server(port string) error {
 	r := mux.NewRouter()
 	r.HandleFunc("/message", HandleCreateMessage).Methods("POST")
 	r.HandleFunc("/message/{keyID}/meta", HandleListMesageMetaForPublicKey).Methods("LIST")
-	r.HandleFunc("/message/{keyID}/{id}", HandleGetMessageByID).Methods("GET")
-	r.HandleFunc("/message/{keyID}/{id}", HandleDeleteMessageByID).Methods("DELETE")
+	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
+	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
 
 	// just for testing, this should be removed
 	r.HandleFunc("/sign", HandleSignDataRequest).Methods("POST")

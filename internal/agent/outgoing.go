@@ -78,7 +78,7 @@ func StartWatcher() error {
 	return nil
 }
 
-func handleOutgoingFile(fp string, pubKeyID, id string) error {
+func handleOutgoingFile(fp string, channel, pubKeyID, id string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
 		"fn":  "handleOutgoingFile",
@@ -92,7 +92,7 @@ func handleOutgoingFile(fp string, pubKeyID, id string) error {
 		l.Errorf("error opening file: %v", err)
 		return err
 	}
-	m, err := message.CreateMessage("file", id, pubKeyID, f)
+	m, err := message.CreateMessage("file", id, channel, pubKeyID, f)
 	if err != nil {
 		l.Errorf("error creating message: %v", err)
 		return err
@@ -119,7 +119,7 @@ func handleOutgoingFiles(files []string) error {
 		dir, fn := filepath.Split(file)
 		key := filepath.Base(dir)
 		l.Infof("handling file %s for key %s", fn, key)
-		if err := handleOutgoingFile(file, key, fn); err != nil {
+		if err := handleOutgoingFile(file, DefaultChannel, key, fn); err != nil {
 			l.Errorf("error handling outgoing file: %v", err)
 			return err
 		}
@@ -141,7 +141,7 @@ func handleOutgoingMessage(fp, pubKeyID, id string) error {
 		l.Errorf("error opening file: %v", err)
 		return err
 	}
-	m, err := message.CreateMessage("message", "", pubKeyID, f)
+	m, err := message.CreateMessage("message", "", DefaultChannel, pubKeyID, f)
 	if err != nil {
 		l.Errorf("error creating message: %v", err)
 		return err

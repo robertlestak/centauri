@@ -21,6 +21,7 @@ var (
 
 type BroadcastMessage struct {
 	Type     string `json:"type"`
+	Channel  string `json:"channel"`
 	PubKeyID string `json:"pubKeyID"`
 	PeerName string `json:"peerName"`
 	ID       string `json:"id"`
@@ -47,7 +48,7 @@ func (d *delegate) NotifyMsg(b []byte) {
 		log.Errorf("error unmarshalling message: %s", err)
 		return
 	}
-	if checkMessageHandled(msg.Type, msg.PubKeyID, msg.ID) {
+	if checkMessageHandled(msg.Type, msg.PubKeyID, msg.Channel, msg.ID) {
 		return
 	}
 	log.Printf("Received message: %s\n", string(b))
@@ -56,7 +57,7 @@ func (d *delegate) NotifyMsg(b []byte) {
 			log.Errorf("error handling message: %s", err)
 		}
 	}
-	storeNewMessage(msg.Type, msg.PubKeyID, msg.ID)
+	storeNewMessage(msg.Type, msg.PubKeyID, msg.Channel, msg.ID)
 }
 
 func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte {
@@ -185,9 +186,10 @@ func Broadcast(msg []byte) {
 	})
 }
 
-func BroadcastNewMessage(pubKeyID string, id string, data []byte) error {
+func BroadcastNewMessage(pubKeyID string, channel string, id string, data []byte) error {
 	msg := &BroadcastMessage{
 		Type:     "newMessage",
+		Channel:  channel,
 		PubKeyID: pubKeyID,
 		PeerName: PeerName,
 		ID:       id,
@@ -202,11 +204,12 @@ func BroadcastNewMessage(pubKeyID string, id string, data []byte) error {
 	return nil
 }
 
-func BroadcastDeleteMessage(pubKeyID string, id string) error {
+func BroadcastDeleteMessage(pubKeyID string, channel string, id string) error {
 	msg := &BroadcastMessage{
 		Type:     "deleteMessage",
 		PubKeyID: pubKeyID,
 		PeerName: PeerName,
+		Channel:  channel,
 		ID:       id,
 	}
 	b, err := json.Marshal(msg)
@@ -218,13 +221,13 @@ func BroadcastDeleteMessage(pubKeyID string, id string) error {
 	return nil
 }
 
-func storeNewMessage(mtype string, pubKeyID, id string) {
+func storeNewMessage(mtype string, pubKeyID, channel, id string) {
 	mtx.Lock()
-	recentMessages[pubKeyID] = append(recentMessages[pubKeyID], mtype+"_"+id)
+	recentMessages[pubKeyID] = append(recentMessages[pubKeyID], mtype+"_"+channel+"_"+id)
 	mtx.Unlock()
 }
 
-func checkMessageHandled(mtype string, pubKeyID, id string) bool {
+func checkMessageHandled(mtype string, pubKeyID, channel, id string) bool {
 	mtx.RLock()
 	_, ok := recentMessages[pubKeyID]
 	mtx.RUnlock()
@@ -232,7 +235,7 @@ func checkMessageHandled(mtype string, pubKeyID, id string) bool {
 		return false
 	}
 	for _, v := range recentMessages[pubKeyID] {
-		if v == mtype+"_"+id {
+		if v == mtype+"_"+channel+"_"+id {
 			return true
 		}
 	}

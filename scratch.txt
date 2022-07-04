@@ -11,11 +11,11 @@ cp ~/Desktop/pub.pub data2/pubkeys/$PUBKEYID
 
 TIMESTAMP=`date +%s`
 TSJ='{"timestamp":'$TIMESTAMP'}'
-SIG=`echo -n $TSJ | openssl dgst -sha256 -sign ~/Desktop/private-key.pem -out /dev/stdout /dev/stdin | base64`
-PUBKEY=`base64 ~/Desktop/pub.pub`
-DATA=`echo -n $TSJ | base64`
+SIG=`echo -n $TSJ | openssl dgst -sha256 -sign ~/Desktop/private-key.pem -out /dev/stdout /dev/stdin | base64 -w0`
+PUBKEY=`base64 -w0 ~/Desktop/pub.pub`
+DATA=`echo -n $TSJ | base64 -w0`
 JD='{"public_key":"'$PUBKEY'","data":"'$DATA'","signature":"'$SIG'"}'
-SIG=`echo $JD | base64`
+SIG=`echo $JD | base64 -w0`
 
 go run cmd/mp/*.go \
     -data data -name foo \
@@ -45,7 +45,7 @@ curl 'localhost:8080/message' -d '{"type": "message", "public_key_id": "'$PUBKEY
 
 KEY=`aesgcm -new -len 32`
 
-ENCRYPTED_DATA="`echo hello | aesgcm -k $KEY -enc`"
+ENCRYPTED_DATA="`echo "file:hello.txt|hello world" | aesgcm -k $KEY -enc`"
 NONCE="`echo \"$ENCRYPTED_DATA\" | head -n1 | awk -F': ' '{print $2}'`"
 CIPHERTEXT="`echo \"$ENCRYPTED_DATA\" | tail -n1 | awk -F': ' '{print $2}'`"
 
@@ -55,8 +55,7 @@ HEADER=`echo '{"k": "'$KEY'", "n": "'$NONCE'"}' | \
 
 ENCRYPTED_MESSAGE="${HEADER}.${CIPHERTEXT}"
 
-curl 'localhost:8080/message' -d '{"type": "message", "public_key_id": "'$PUBKEYID'", "data": "'`echo $ENCRYPTED_MESSAGE | base64 -w0`'"}'
-
+curl 'localhost:8080/message' -d '{"type": "message", "channel": "default", "public_key_id": "'$PUBKEYID'", "data": "'`echo $ENCRYPTED_MESSAGE | base64 -w0`'"}'
 
 
 # split ENCRYPTED_MESSAGE on "."

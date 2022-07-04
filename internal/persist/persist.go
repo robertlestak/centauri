@@ -24,9 +24,10 @@ var (
 )
 
 type MessageMetaData struct {
-	ID       string
-	PubKeyID string
-	Size     int64
+	ID       string `json:"id"`
+	Channel  string `json:"channel"`
+	PubKeyID string `json:"pubkey_id"`
+	Size     int64  `json:"size"`
 }
 
 func EnsureNodeDataDir(name string) error {
@@ -36,15 +37,7 @@ func EnsureNodeDataDir(name string) error {
 	})
 	l.Info("ensuring node data dir")
 	NodeDataDir = RootDataDir + "/" + name
-	if _, err := os.Stat(NodeDataDir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(NodeDataDir, 0755); err != nil {
-				l.Errorf("failed to create node data dir: %v", err)
-				return err
-			}
-		}
-	}
-	return nil
+	return EnsureDir(NodeDataDir)
 }
 
 func EnsureAgentMessagesDir() error {
@@ -54,16 +47,7 @@ func EnsureAgentMessagesDir() error {
 	})
 	l.Info("ensuring agent messages dir")
 	AgentMessagesDir = RootDataDir + "/" + "received/messages"
-	//AgentMessagesDir = RootDataDir
-	if _, err := os.Stat(AgentMessagesDir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(AgentMessagesDir, 0755); err != nil {
-				l.Errorf("failed to create agent messages dir: %v", err)
-				return err
-			}
-		}
-	}
-	return nil
+	return EnsureDir(AgentMessagesDir)
 }
 
 func EnsureAgentFilesDir() error {
@@ -73,16 +57,7 @@ func EnsureAgentFilesDir() error {
 	})
 	l.Info("ensuring agent files dir")
 	AgentFilesDir = RootDataDir + "/" + "received/files"
-	//AgentMessagesDir = RootDataDir
-	if _, err := os.Stat(AgentFilesDir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(AgentFilesDir, 0755); err != nil {
-				l.Errorf("failed to create agent messages dir: %v", err)
-				return err
-			}
-		}
-	}
-	return nil
+	return EnsureDir(AgentFilesDir)
 }
 
 func EnsureAgentOutgoingDir() error {
@@ -92,32 +67,19 @@ func EnsureAgentOutgoingDir() error {
 	})
 	l.Info("ensuring agent messages dir")
 	AgentOutgoingDir = RootDataDir + "/" + "outgoing"
-	//AgentMessagesDir = RootDataDir
-	if _, err := os.Stat(AgentOutgoingDir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(AgentOutgoingDir, 0755); err != nil {
-				l.Errorf("failed to create agent messages dir: %v", err)
-				return err
-			}
-		}
+	if err := EnsureDir(AgentOutgoingDir); err != nil {
+		l.Errorf("failed to create agent outgoing dir: %v", err)
+		return err
 	}
 	AgentOutgoingFilesDir = AgentOutgoingDir + "/files"
-	if _, err := os.Stat(AgentOutgoingFilesDir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(AgentOutgoingFilesDir, 0755); err != nil {
-				l.Errorf("failed to create agent messages dir: %v", err)
-				return err
-			}
-		}
+	if err := EnsureDir(AgentOutgoingFilesDir); err != nil {
+		l.Errorf("failed to create agent outgoing files dir: %v", err)
+		return err
 	}
 	AgentOutgoingMessagesDir = AgentOutgoingDir + "/messages"
-	if _, err := os.Stat(AgentOutgoingMessagesDir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(AgentOutgoingMessagesDir, 0755); err != nil {
-				l.Errorf("failed to create agent messages dir: %v", err)
-				return err
-			}
-		}
+	if err := EnsureDir(AgentOutgoingMessagesDir); err != nil {
+		l.Errorf("failed to ensure agent outgoing messages dir: %v", err)
+		return err
 	}
 	return nil
 }
@@ -129,15 +91,7 @@ func EnsureMessagesDir() error {
 	})
 	l.Info("ensuring messages dir")
 	MessagesDir = NodeDataDir + "/messages"
-	if _, err := os.Stat(MessagesDir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(MessagesDir, 0755); err != nil {
-				l.Errorf("failed to create messages dir: %v", err)
-				return err
-			}
-		}
-	}
-	return nil
+	return EnsureDir(MessagesDir)
 }
 
 func EnsurePubKeyDir(pubKeyID string) (string, error) {
@@ -147,15 +101,25 @@ func EnsurePubKeyDir(pubKeyID string) (string, error) {
 	})
 	l.Info("ensuring pub key dir")
 	dir := PubKeyMessageDir(pubKeyID)
+	return dir, EnsureDir(dir)
+}
+
+func EnsureDir(dir string) error {
+	l := log.WithFields(log.Fields{
+		"pkg": "persist",
+		"fn":  "EnsureDir",
+		"dir": dir,
+	})
+	l.Info("ensuring dir")
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
 			if err := os.MkdirAll(dir, 0755); err != nil {
-				l.Errorf("failed to create pub key dir: %v", err)
-				return dir, err
+				l.Errorf("failed to create dir: %v", err)
+				return err
 			}
 		}
 	}
-	return dir, nil
+	return nil
 }
 
 func EnsureAgentPubKeyChainDir() error {
@@ -166,15 +130,7 @@ func EnsureAgentPubKeyChainDir() error {
 	l.Info("ensuring pub key dir")
 	dir := RootDataDir + "/pubkeys"
 	AgentPubKeyChainDir = dir
-	if _, err := os.Stat(dir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				l.Errorf("failed to create pub key dir: %v", err)
-				return err
-			}
-		}
-	}
-	return nil
+	return EnsureDir(AgentPubKeyChainDir)
 }
 
 func EnsurePubKeyChainDir(pubKeyID string) (string, error) {
@@ -202,23 +158,15 @@ func EnsurePubKeyChainOutgoingDir(pubKeyID string) (string, error) {
 	})
 	l.Info("ensuring pub key dir")
 	dir := AgentOutgoingFilesDir + "/" + pubKeyID
-	if _, err := os.Stat(dir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				l.Errorf("failed to create pub key dir: %v", err)
-				return dir, err
-			}
-		}
+	if err := EnsureDir(dir); err != nil {
+		l.Errorf("failed to create pub key dir: %v", err)
+		return dir, err
 	}
 	l.Infof("outgoing files dir: %s", dir)
 	dir = AgentOutgoingMessagesDir + "/" + pubKeyID
-	if _, err := os.Stat(dir); err != nil {
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(dir, 0755); err != nil {
-				l.Errorf("failed to create pub key dir: %v", err)
-				return dir, err
-			}
-		}
+	if err := EnsureDir(dir); err != nil {
+		l.Errorf("failed to create pub key dir: %v", err)
+		return dir, err
 	}
 	l.Infof("outgoing messages dir: %s", dir)
 	return dir, nil
@@ -297,15 +245,19 @@ func PubKeyChainDir(pubKeyID string) string {
 	return AgentPubKeyChainDir + "/" + pubKeyID
 }
 
-func StoreMessage(pubKeyID string, id string, data []byte) error {
+func StoreMessage(pubKeyID string, channel string, id string, data []byte) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
 		"fn":  "StoreMessage",
 	})
 	l.Info("storing message")
-	dir, err := EnsurePubKeyDir(pubKeyID)
-	if err != nil {
-		l.Errorf("failed to ensure pub key dir: %v", err)
+	dir := PubKeyMessageDir(pubKeyID)
+	if channel == "" {
+		channel = "default"
+	}
+	dir = dir + "/" + channel
+	if err := EnsureDir(dir); err != nil {
+		l.Errorf("failed to create dir: %v", err)
 		return err
 	}
 	file := dir + "/" + id
@@ -316,10 +268,12 @@ func StoreMessage(pubKeyID string, id string, data []byte) error {
 	return nil
 }
 
-func ListMessageMetaForPubKeyID(pubKeyID string) ([]MessageMetaData, error) {
+func ListMessageMetaForPubKeyID(pubKeyID string, channel string) ([]MessageMetaData, error) {
 	l := log.WithFields(log.Fields{
-		"pkg": "persist",
-		"fn":  "ListMessageMetaForPubKeyID",
+		"pkg":      "persist",
+		"fn":       "ListMessageMetaForPubKeyID",
+		"pubKeyID": pubKeyID,
+		"channel":  channel,
 	})
 	l.Info("listing messages for pub key id")
 	var md []MessageMetaData
@@ -333,22 +287,40 @@ func ListMessageMetaForPubKeyID(pubKeyID string) ([]MessageMetaData, error) {
 		return nil, err
 	}
 	// loop files in dir and get metadata
-	files, err := ioutil.ReadDir(dir)
+	var chanselect string
+	if channel == "" {
+		chanselect = "*"
+	} else {
+		chanselect = channel
+	}
+	files, err := filepath.Glob(dir + "/" + chanselect + "/*")
 	if err != nil {
-		l.Errorf("failed to read dir: %v", err)
+		l.Errorf("failed to glob dir: %v", err)
 		return nil, err
 	}
+	// for each file, the file name is the message id
+	// and the parent dir is the channel
 	for _, file := range files {
-		md = append(md, MessageMetaData{
-			ID:       file.Name(),
-			PubKeyID: pubKeyID,
-			Size:     file.Size(),
-		})
+		id := filepath.Base(file)
+		channel := filepath.Base(filepath.Dir(file))
+		// get file size
+		if stat, err := os.Stat(file); err != nil {
+			l.Errorf("failed to stat file: %v", err)
+			return nil, err
+		} else {
+			size := stat.Size()
+			md = append(md, MessageMetaData{
+				ID:       id,
+				PubKeyID: pubKeyID,
+				Size:     size,
+				Channel:  channel,
+			})
+		}
 	}
 	return md, nil
 }
 
-func GetMessageByID(pubKeyID string, id string) ([]byte, error) {
+func GetMessageByID(pubKeyID string, channel string, id string) ([]byte, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
 		"fn":  "GetMessageByID",
@@ -362,7 +334,10 @@ func GetMessageByID(pubKeyID string, id string) ([]byte, error) {
 		l.Errorf("failed to stat dir: %v", err)
 		return nil, err
 	}
-	file := dir + "/" + id
+	if channel == "" {
+		channel = "default"
+	}
+	file := dir + "/" + channel + "/" + id
 	// check if file exists
 	if _, err := os.Stat(file); err != nil {
 		if os.IsNotExist(err) {
@@ -382,12 +357,26 @@ func DeleteDirIfEmpty(dir string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
 		"fn":  "DeleteDirIfEmpty",
+		"dir": dir,
 	})
 	l.Info("deleting dir if empty")
-	files, err := ioutil.ReadDir(dir)
+	// loop through dir and if there are empty dirs, delete them
+	// if this dir is empty, delete it
+	files, err := filepath.Glob(dir + "/*")
 	if err != nil {
-		l.Errorf("failed to read dir: %v", err)
+		l.Errorf("failed to glob dir: %v", err)
 		return err
+	}
+	for _, file := range files {
+		if stat, err := os.Stat(file); err != nil {
+			l.Errorf("failed to stat file: %v", err)
+			return err
+		} else if stat.IsDir() {
+			if err := DeleteDirIfEmpty(file); err != nil {
+				l.Errorf("failed to delete dir: %v", err)
+				return err
+			}
+		}
 	}
 	if len(files) == 0 {
 		if err := os.Remove(dir); err != nil {
@@ -398,21 +387,24 @@ func DeleteDirIfEmpty(dir string) error {
 	return nil
 }
 
-func DeleteMessageByID(pubKeyID string, id string) error {
+func DeleteMessageByID(pubKeyID string, channel string, id string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
 		"fn":  "DeleteMessageByID",
 	})
 	l.Info("deleting message by id")
-	dir := PubKeyMessageDir(pubKeyID)
-	if _, err := os.Stat(dir); err != nil {
+	mdir := PubKeyMessageDir(pubKeyID)
+	if _, err := os.Stat(mdir); err != nil {
 		if os.IsNotExist(err) {
 			return errors.New("message not found")
 		}
 		l.Errorf("failed to stat dir: %v", err)
 		return err
 	}
-	file := dir + "/" + id
+	if channel == "" {
+		channel = "default"
+	}
+	file := mdir + "/" + channel + "/" + id
 	if _, err := os.Stat(file); err != nil {
 		if os.IsNotExist(err) {
 			l.Errorf("message does not exist: %v", err)
@@ -423,9 +415,10 @@ func DeleteMessageByID(pubKeyID string, id string) error {
 		l.Errorf("failed to delete file: %v", err)
 		return err
 	}
-	return DeleteDirIfEmpty(dir)
+	return DeleteDirIfEmpty(mdir)
 }
 
+// TODO: fix
 func cleanupOldFiles(dur time.Duration) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
@@ -442,7 +435,7 @@ func cleanupOldFiles(dur time.Duration) error {
 			l.Errorf("failed to walk file tree: %v", err)
 			return err
 		}
-		// if file is a directory, it is a pubKeyID
+		// if file is a directory, it is a pubKeyID dir or channel dir
 		if info.IsDir() {
 			// get pubKeyID
 			pubKeyID := filepath.Base(path)
@@ -472,7 +465,8 @@ func cleanupOldFiles(dur time.Duration) error {
 	// delete files
 	for pubKeyID, messageIDs := range deletions {
 		for _, messageID := range messageIDs {
-			err := DeleteMessageByID(pubKeyID, messageID)
+			channel := "default"
+			err := DeleteMessageByID(pubKeyID, channel, messageID)
 			if err != nil {
 				l.Errorf("failed to delete message: %v", err)
 				return err
@@ -497,7 +491,7 @@ func TimeoutCleaner() {
 	}
 }
 
-func StoreAgentMessage(name string, mtype string, data []byte) error {
+func StoreAgentMessage(channel string, name string, mtype string, data []byte) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
 		"fn":  "StoreAgentMessage",
@@ -513,7 +507,12 @@ func StoreAgentMessage(name string, mtype string, data []byte) error {
 		l.Errorf("invalid message type: %v", mtype)
 		return errors.New("invalid message type")
 	}
-	file := dir + "/" + name
+	cdir := dir + "/" + channel
+	if err := EnsureDir(cdir); err != nil {
+		l.Errorf("failed to ensure dir: %v", err)
+		return err
+	}
+	file := cdir + "/" + name
 	// if file exists, append guid to new file name
 	if _, err := os.Stat(file); err == nil {
 		guid := uuid.New().String()

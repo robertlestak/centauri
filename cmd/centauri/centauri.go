@@ -20,6 +20,7 @@ import (
 var (
 	wg                      sync.WaitGroup
 	flagAgentMode           *bool
+	flagAgentChannel        *string
 	flagAgentPrivateKeyPath *string
 	flagPeerConnectionMode  *string
 	flagPeerBindPort        *int
@@ -145,6 +146,7 @@ func agnt() {
 		os.Exit(1)
 	}
 	go keys.PubKeyLoader(*flagDataDir + "/pubkeys")
+	agent.DefaultChannel = *flagAgentChannel
 	if err := agent.Agent(); err != nil {
 		l.Errorf("failed to start agent: %v", err)
 		os.Exit(1)
@@ -158,6 +160,7 @@ func main() {
 	})
 	l.Info("starting")
 	flagAgentMode = flag.Bool("agent", false, "run as agent")
+	flagAgentChannel = flag.String("agent-channel", "default", "channel to listen on")
 	flagAgentPrivateKeyPath = flag.String("agent-key", "", "path to private key for agent")
 	flagPeerMode = flag.Bool("peer", false, "run as peer")
 	flagPeerBindPort = flag.Int("peer-bind-port", 0, "peer port to bind")

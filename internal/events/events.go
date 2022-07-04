@@ -10,20 +10,20 @@ import (
 
 var (
 	PeerName                 string
-	DeletionHandlers         = []func(pubKeyID, id string) error{}
-	NewMessageHandlers       = []func(pubKeyID, id string, data []byte) error{}
-	ReceivedDeletionHandlers = []func(pubKeyID, id string, eventTrigger bool) error{}
-	ReceivedMessageHandlers  = []func(pubKeyID, id string, data []byte) error{}
+	DeletionHandlers         = []func(pubKeyID, channel string, id string) error{}
+	NewMessageHandlers       = []func(pubKeyID, channel string, id string, data []byte) error{}
+	ReceivedDeletionHandlers = []func(pubKeyID, channel string, id string, eventTrigger bool) error{}
+	ReceivedMessageHandlers  = []func(pubKeyID, channel string, id string, data []byte) error{}
 )
 
-func DeleteMessage(pubKeyID, id string) error {
+func DeleteMessage(pubKeyID, channel, id string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "events",
 		"fn":  "DeleteMessage",
 	})
 	l.Info("deleting message")
 	for _, f := range DeletionHandlers {
-		if err := f(pubKeyID, id); err != nil {
+		if err := f(pubKeyID, channel, id); err != nil {
 			l.Errorf("error deleting message: %v", err)
 			return err
 		}
@@ -31,14 +31,14 @@ func DeleteMessage(pubKeyID, id string) error {
 	return nil
 }
 
-func NewMessage(pubKeyID, id string, data []byte) error {
+func NewMessage(pubKeyID, channel string, id string, data []byte) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "events",
 		"fn":  "NewMessage",
 	})
 	l.Info("new message")
 	for _, f := range NewMessageHandlers {
-		if err := f(pubKeyID, id, data); err != nil {
+		if err := f(pubKeyID, channel, id, data); err != nil {
 			l.Errorf("error new message: %v", err)
 			return err
 		}
@@ -62,6 +62,7 @@ func ReceiveMessage(data []byte) error {
 		l.Info("new message")
 		pubKeyID := md["pubKeyID"].(string)
 		id := md["id"].(string)
+		channel := md["channel"].(string)
 		data := md["data"].(string)
 		bd, err := base64.StdEncoding.DecodeString(data)
 		if err != nil {
@@ -69,7 +70,7 @@ func ReceiveMessage(data []byte) error {
 			return err
 		}
 		for _, f := range ReceivedMessageHandlers {
-			if err := f(pubKeyID, id, bd); err != nil {
+			if err := f(pubKeyID, channel, id, bd); err != nil {
 				l.Errorf("error receiving message: %v", err)
 				return err
 			}
@@ -77,9 +78,10 @@ func ReceiveMessage(data []byte) error {
 	case "deleteMessage":
 		l.Info("delete message")
 		pubKeyID := md["pubKeyID"].(string)
+		channel := md["channel"].(string)
 		id := md["id"].(string)
 		for _, f := range ReceivedDeletionHandlers {
-			if err := f(pubKeyID, id, true); err != nil {
+			if err := f(pubKeyID, channel, id, true); err != nil {
 				l.Errorf("error deleting message: %v", err)
 				return err
 			}

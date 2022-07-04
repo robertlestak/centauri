@@ -21,9 +21,10 @@ import (
 )
 
 var (
-	ServerAddrs []string
-	PrivateKey  *rsa.PrivateKey
-	lastServer  int
+	ServerAddrs    []string
+	DefaultChannel string = "default"
+	PrivateKey     *rsa.PrivateKey
+	lastServer     int
 )
 
 type MessageMeta struct {
@@ -31,22 +32,27 @@ type MessageMeta struct {
 	Size int64  `json:"size"`
 }
 
-func getMessageWorker(ids chan string, res chan error) {
+type GetJob struct {
+	Channel string
+	ID      string
+}
+
+func getMessageWorker(jobs chan GetJob, res chan error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
 		"fn":  "getMessageWorker",
 	})
-	for id := range ids {
-		l.Infof("getting message %s", id)
-		m, err := GetMessage(id)
+	for job := range jobs {
+		l.Infof("getting message %s", job.ID)
+		m, err := GetMessage(job.Channel, job.ID)
 		if err != nil {
-			l.Errorf("error getting message %s: %v", id, err)
+			l.Errorf("error getting message %s: %v", job.ID, err)
 			res <- err
 			continue
 		}
 		m, err = DecryptMessageData(m)
 		if err != nil {
-			l.Errorf("error decrypting message %s: %v", id, err)
+			l.Errorf("error decrypting message %s: %v", job.ID, err)
 		}
 		fn := m.ID
 		// check if data has optional file metadata prefix
@@ -75,13 +81,13 @@ func getMessageWorker(ids chan string, res chan error) {
 				}
 			}
 		}
-		if err := persist.StoreAgentMessage(fn, mtype, m.Data); err != nil {
-			l.Errorf("error storing message %s: %v", id, err)
+		if err := persist.StoreAgentMessage(job.Channel, fn, mtype, m.Data); err != nil {
+			l.Errorf("error storing message %s: %v", job.ID, err)
 			res <- err
 			continue
 		}
-		if err := ConfirmMessageReceive(m.ID); err != nil {
-			l.Errorf("error confirming message %s: %v", id, err)
+		if err := ConfirmMessageReceive(job.Channel, m.ID); err != nil {
+			l.Errorf("error confirming message %s: %v", job.ID, err)
 			res <- err
 			continue
 		}
@@ -102,7 +108,7 @@ func Agent() error {
 			time.Sleep(time.Second * 10)
 			continue
 		}
-		msgs, err := CheckPendingMessages()
+		msgs, err := CheckPendingMessages(DefaultChannel)
 		if err != nil {
 			l.Errorf("error checking pending messages: %v", err)
 			time.Sleep(time.Second * 10)
@@ -114,13 +120,17 @@ func Agent() error {
 			continue
 		}
 		l.Infof("pending messages: %v", msgs)
-		ids := make(chan string, len(msgs))
+		jobs := make(chan GetJob, len(msgs))
 		res := make(chan error, len(msgs))
 		for i := 0; i < 10; i++ {
-			go getMessageWorker(ids, res)
+			go getMessageWorker(jobs, res)
 		}
 		for _, m := range msgs {
-			ids <- m.ID
+			j := GetJob{
+				Channel: DefaultChannel,
+				ID:      m.ID,
+			}
+			jobs <- j
 		}
 		for i := 0; i < len(msgs); i++ {
 			err := <-res
@@ -226,10 +236,11 @@ func CreateSignature() (string, string, error) {
 	return base64.StdEncoding.EncodeToString(j), keyID, nil
 }
 
-func CheckPendingMessages() ([]MessageMeta, error) {
+func CheckPendingMessages(channel string) ([]MessageMeta, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
 		"fn":  "CheckPendingMessages",
+		"ch":  channel,
 	})
 	l.Info("checking pending messages")
 	var msgs []MessageMeta
@@ -241,6 +252,9 @@ func CheckPendingMessages() ([]MessageMeta, error) {
 		return msgs, err
 	}
 	addr := saddr + "/message/" + keyID + "/meta"
+	if channel != "" {
+		addr = addr + "?channel=" + channel
+	}
 	req, err := http.NewRequest("LIST", addr, nil)
 	if err != nil {
 		l.Errorf("error creating request: %v", err)
@@ -271,10 +285,12 @@ func CheckPendingMessages() ([]MessageMeta, error) {
 	return msgs, nil
 }
 
-func GetMessage(id string) (*message.Message, error) {
+func GetMessage(channel, id string) (*message.Message, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
 		"fn":  "GetMessage",
+		"id":  id,
+		"ch":  channel,
 	})
 	l.Info("getting message")
 	saddr := GetAgentServer()
@@ -284,7 +300,7 @@ func GetMessage(id string) (*message.Message, error) {
 		l.Errorf("error creating signature: %v", err)
 		return nil, err
 	}
-	addr := saddr + "/message/" + keyID + "/" + id
+	addr := saddr + "/message/" + keyID + "/" + channel + "/" + id
 	req, err := http.NewRequest("GET", addr, nil)
 	if err != nil {
 		l.Errorf("error creating request: %v", err)
@@ -308,13 +324,14 @@ func GetMessage(id string) (*message.Message, error) {
 	}
 	m := &message.Message{
 		ID:          id,
+		Channel:     channel,
 		PublicKeyID: keyID,
 		Data:        bd,
 	}
 	return m, nil
 }
 
-func ConfirmMessageReceive(id string) error {
+func ConfirmMessageReceive(channel, id string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
 		"fn":  "ConfirmMessageReceive",
@@ -327,7 +344,7 @@ func ConfirmMessageReceive(id string) error {
 		l.Errorf("error creating signature: %v", err)
 		return err
 	}
-	addr := saddr + "/message/" + keyID + "/" + id
+	addr := saddr + "/message/" + keyID + "/" + channel + "/" + id
 	req, err := http.NewRequest("DELETE", addr, nil)
 	if err != nil {
 		l.Errorf("error creating request: %v", err)

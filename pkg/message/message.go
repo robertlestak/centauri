@@ -18,6 +18,7 @@ type Metadata struct {
 
 type Message struct {
 	Type        string `json:"type"`
+	Channel     string `json:"channel"`
 	ID          string `json:"id"`
 	PublicKeyID string `json:"public_key_id,omitempty"`
 	Data        []byte `json:"data"`
@@ -75,7 +76,7 @@ func (m *Message) Create() (*Message, error) {
 		l.Errorf("error storing message: %v", err)
 		return nil, err
 	}
-	if err := events.NewMessage(m.PublicKeyID, m.ID, m.Data); err != nil {
+	if err := events.NewMessage(m.PublicKeyID, m.Channel, m.ID, m.Data); err != nil {
 		l.Errorf("error creating message: %v", err)
 		return nil, err
 	}
@@ -88,29 +89,31 @@ func (m *Message) StoreLocal() error {
 		"fn":  "StoreLocal",
 	})
 	l.Info("storing message locally")
-	if err := persist.StoreMessage(m.PublicKeyID, m.ID, m.Data); err != nil {
+	if err := persist.StoreMessage(m.PublicKeyID, m.Channel, m.ID, m.Data); err != nil {
 		l.Errorf("error storing message: %v", err)
 		return err
 	}
 	return nil
 }
 
-func ListMessageMetaForPubKeyID(pubKeyID string) ([]persist.MessageMetaData, error) {
+func ListMessageMetaForPubKeyID(pubKeyID string, channel string) ([]persist.MessageMetaData, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "message",
 		"fn":  "ListMessageMetaForPubKeyID",
+		"id":  pubKeyID,
+		"ch":  channel,
 	})
 	l.Info("listing messages for public key")
-	return persist.ListMessageMetaForPubKeyID(pubKeyID)
+	return persist.ListMessageMetaForPubKeyID(pubKeyID, channel)
 }
 
-func GetMessageByID(pubKeyID string, id string) (*Message, error) {
+func GetMessageByID(pubKeyID string, channel string, id string) (*Message, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "message",
 		"fn":  "GetMessageByID",
 	})
 	l.Info("getting message by id")
-	data, err := persist.GetMessageByID(pubKeyID, id)
+	data, err := persist.GetMessageByID(pubKeyID, channel, id)
 	if err != nil {
 		l.Errorf("error getting message: %v", err)
 		return nil, err
@@ -118,12 +121,13 @@ func GetMessageByID(pubKeyID string, id string) (*Message, error) {
 	m := &Message{
 		ID:          id,
 		PublicKeyID: pubKeyID,
+		Channel:     channel,
 		Data:        data,
 	}
 	return m, nil
 }
 
-func GetMessageFromPeer(pubKeyID string, id string, data []byte) error {
+func GetMessageFromPeer(pubKeyID string, channel string, id string, data []byte) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "message",
 		"fn":  "GetMessageFromPeer",
@@ -132,6 +136,7 @@ func GetMessageFromPeer(pubKeyID string, id string, data []byte) error {
 	msg := &Message{
 		Type:        "message",
 		ID:          id,
+		Channel:     channel,
 		PublicKeyID: pubKeyID,
 		Data:        data,
 	}
@@ -142,18 +147,18 @@ func GetMessageFromPeer(pubKeyID string, id string, data []byte) error {
 	return nil
 }
 
-func DeleteMessageByID(pubKeyID string, id string, eventTrigger bool) error {
+func DeleteMessageByID(pubKeyID string, channel string, id string, eventTrigger bool) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "message",
 		"fn":  "DeleteMessageByID",
 	})
 	l.Info("deleting message by id")
-	if err := persist.DeleteMessageByID(pubKeyID, id); err != nil {
+	if err := persist.DeleteMessageByID(pubKeyID, channel, id); err != nil {
 		l.Errorf("error deleting message: %v", err)
 		return err
 	}
 	if !eventTrigger {
-		if err := events.DeleteMessage(pubKeyID, id); err != nil {
+		if err := events.DeleteMessage(pubKeyID, channel, id); err != nil {
 			l.Errorf("error deleting message: %v", err)
 			return err
 		}
@@ -161,13 +166,14 @@ func DeleteMessageByID(pubKeyID string, id string, eventTrigger bool) error {
 	return nil
 }
 
-func CreateMessage(mType string, fileName string, pubKeyID string, rawDataReader io.ReadCloser) (*Message, error) {
+func CreateMessage(mType string, fileName string, channel string, pubKeyID string, rawDataReader io.ReadCloser) (*Message, error) {
 	l := log.WithFields(log.Fields{
-		"pkg":    "message",
-		"fn":     "CreateMessage",
-		"type":   mType,
-		"file":   fileName,
-		"pubkey": pubKeyID,
+		"pkg":     "message",
+		"fn":      "CreateMessage",
+		"type":    mType,
+		"file":    fileName,
+		"channel": channel,
+		"pubkey":  pubKeyID,
 	})
 	l.Info("creating message")
 	var pubKey []byte
@@ -199,6 +205,7 @@ func CreateMessage(mType string, fileName string, pubKeyID string, rawDataReader
 	}
 	m := &Message{
 		Type:        mType,
+		Channel:     channel,
 		PublicKeyID: pubKeyID,
 		Data:        []byte(*enc),
 	}
