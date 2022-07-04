@@ -21,10 +21,11 @@ import (
 )
 
 var (
-	ServerAddrs    []string
-	DefaultChannel string = "default"
-	PrivateKey     *rsa.PrivateKey
-	lastServer     int
+	ServerAddrs     []string
+	ServerAuthToken string
+	DefaultChannel  string = "default"
+	PrivateKey      *rsa.PrivateKey
+	lastServer      int
 )
 
 type MessageMeta struct {
@@ -261,6 +262,9 @@ func CheckPendingMessages(channel string) ([]MessageMeta, error) {
 		return msgs, err
 	}
 	req.Header.Set("X-Signature", sig)
+	if ServerAuthToken != "" {
+		req.Header.Set("X-Token", ServerAuthToken)
+	}
 	resp, err := c.Do(req)
 	if err != nil {
 		l.Errorf("error sending request: %v", err)
@@ -307,6 +311,9 @@ func GetMessage(channel, id string) (*message.Message, error) {
 		return nil, err
 	}
 	req.Header.Set("X-Signature", sig)
+	if ServerAuthToken != "" {
+		req.Header.Set("X-Token", ServerAuthToken)
+	}
 	resp, err := c.Do(req)
 	if err != nil {
 		l.Errorf("error sending request: %v", err)
@@ -351,6 +358,9 @@ func ConfirmMessageReceive(channel, id string) error {
 		return err
 	}
 	req.Header.Set("X-Signature", sig)
+	if ServerAuthToken != "" {
+		req.Header.Set("X-Token", ServerAuthToken)
+	}
 	resp, err := c.Do(req)
 	if err != nil {
 		l.Errorf("error sending request: %v", err)

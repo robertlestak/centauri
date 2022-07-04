@@ -33,6 +33,7 @@ var (
 	flagDataDir             *string
 	flagPeerMode            *bool
 	flagServerMode          *bool
+	flagServerAuthToken     *string
 	flagUpstreamServerAddrs *string
 	flagHelp                *bool
 )
@@ -116,7 +117,7 @@ func serv() {
 		"fn":  "serv",
 	})
 	l.Info("starting")
-	if err := server.Server(*flagServerPort); err != nil {
+	if err := server.Server(*flagServerPort, *flagServerAuthToken); err != nil {
 		l.Errorf("failed to start server: %v", err)
 		os.Exit(1)
 	}
@@ -147,6 +148,9 @@ func agnt() {
 	}
 	go keys.PubKeyLoader(*flagDataDir + "/pubkeys")
 	agent.DefaultChannel = *flagAgentChannel
+	if *flagServerAuthToken != "" {
+		agent.ServerAuthToken = *flagServerAuthToken
+	}
 	if err := agent.Agent(); err != nil {
 		l.Errorf("failed to start agent: %v", err)
 		os.Exit(1)
@@ -172,6 +176,7 @@ func main() {
 	flagServerMode = flag.Bool("server", false, "run as server")
 	flagUpstreamServerAddrs = flag.String("server-addrs", "", "addresses to join as an agent")
 	flagServerPort = flag.String("server-port", "8080", "port to use for server")
+	flagServerAuthToken = flag.String("server-token", "", "auth token for server")
 	flagPeerName = flag.String("peer-name", "", "name of this node")
 	flagDataDir = flag.String("data", "", "data directory")
 	flagHelp = flag.Bool("help", false, "show help")

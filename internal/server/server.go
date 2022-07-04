@@ -227,13 +227,25 @@ func ValidateSignedRequest(r *http.Request) (string, error) {
 	return pubKeyID, nil
 }
 
-func Server(port string) error {
+func Server(port string, authToken string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "server",
 		"fn":  "Server",
 	})
 	l.Info("starting server")
 	r := mux.NewRouter()
+	if authToken != "" {
+		r.Use(func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Header.Get("X-Token") != authToken {
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
+				h.ServeHTTP(w, r)
+			})
+		})
+	}
+
 	r.HandleFunc("/message", HandleCreateMessage).Methods("POST")
 	r.HandleFunc("/message/{keyID}/meta", HandleListMesageMetaForPublicKey).Methods("LIST")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
