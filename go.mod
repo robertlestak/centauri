@@ -3,6 +3,7 @@ module github.com/robertlestak/mp
 go 1.18
 
 require (
+	github.com/fsnotify/fsnotify v1.5.4
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/memberlist v0.3.1

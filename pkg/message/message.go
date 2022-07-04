@@ -1,11 +1,9 @@
 package message
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
+	"io"
+	"io/ioutil"
 
 	"github.com/google/uuid"
 	"github.com/robertlestak/mp/internal/events"
@@ -45,33 +43,6 @@ func validateType(t string) error {
 		return errors.New("type is invalid")
 	}
 	return nil
-}
-
-func RsaEncrypt(publicKey []byte, origData []byte) ([]byte, error) {
-	l := log.WithFields(log.Fields{
-		"pkg": "message",
-		"fn":  "RsaEncrypt",
-	})
-	l.Info("encrypting data")
-	l.Debugf("public key: %s", publicKey)
-	pub, err := keys.BytesToPubKey(publicKey)
-	if err != nil {
-		l.Errorf("error converting public key: %v", err)
-		return nil, err
-	}
-	return rsa.EncryptPKCS1v15(rand.Reader, pub, origData)
-}
-
-func RsaDecrypt(privateKey []byte, ciphertext []byte) ([]byte, error) {
-	block, _ := pem.Decode(privateKey)
-	if block == nil {
-		return nil, errors.New("private key error")
-	}
-	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return rsa.DecryptPKCS1v15(rand.Reader, priv, ciphertext)
 }
 
 func (m *Message) Create() (*Message, error) {
@@ -188,4 +159,48 @@ func DeleteMessageByID(pubKeyID string, id string, eventTrigger bool) error {
 		}
 	}
 	return nil
+}
+
+func CreateMessage(mType string, fileName string, pubKeyID string, rawDataReader io.ReadCloser) (*Message, error) {
+	l := log.WithFields(log.Fields{
+		"pkg":    "message",
+		"fn":     "CreateMessage",
+		"type":   mType,
+		"file":   fileName,
+		"pubkey": pubKeyID,
+	})
+	l.Info("creating message")
+	var pubKey []byte
+	// get public key for pubKeyID
+	if k, ok := keys.PublicKeyChain[pubKeyID]; !ok {
+		l.Errorf("public key not found: %s", pubKeyID)
+		return nil, errors.New("public key not found")
+	} else {
+		pubKey = k
+	}
+	var rawData []byte
+	// read rawData from rawDataReader
+	if rawDataReader != nil {
+		var err error
+		rawData, err = ioutil.ReadAll(rawDataReader)
+		if err != nil {
+			l.Errorf("error reading raw data: %v", err)
+			return nil, err
+		}
+	}
+	if mType == "file" && fileName != "" {
+		// add file:<filename>| prefix to rawData
+		rawData = append([]byte("file:"+fileName+"|"), rawData...)
+	}
+	enc, err := keys.EncryptMessage(pubKey, rawData)
+	if err != nil {
+		l.Errorf("error encrypting data: %v", err)
+		return nil, err
+	}
+	m := &Message{
+		Type:        mType,
+		PublicKeyID: pubKeyID,
+		Data:        []byte(*enc),
+	}
+	return m, nil
 }

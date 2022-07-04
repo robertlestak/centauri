@@ -79,17 +79,17 @@ func HandleGetMessageByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	keyID := vars["keyID"]
-	// pubKeyID, err := ValidateSignedRequest(r)
-	// if err != nil {
-	// 	l.Errorf("error validating signed request: %v", err)
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return
-	// }
-	// if keyID != pubKeyID {
-	// 	l.Errorf("key id mismatch: %v != %v", keyID, pubKeyID)
-	// 	http.Error(w, "key id mismatch", http.StatusBadRequest)
-	// 	return
-	// }
+	pubKeyID, err := ValidateSignedRequest(r)
+	if err != nil {
+		l.Errorf("error validating signed request: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if keyID != pubKeyID {
+		l.Errorf("key id mismatch: %v != %v", keyID, pubKeyID)
+		http.Error(w, "key id mismatch", http.StatusBadRequest)
+		return
+	}
 	m, err := message.GetMessageByID(keyID, id)
 	if err != nil {
 		l.Errorf("error getting message by id: %v", err)

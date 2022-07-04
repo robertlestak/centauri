@@ -17,6 +17,7 @@ var (
 	MessagesDir              string
 	AgentMessagesDir         string
 	AgentFilesDir            string
+	AgentPubKeyChainDir      string
 	AgentOutgoingDir         string
 	AgentOutgoingFilesDir    string
 	AgentOutgoingMessagesDir string
@@ -157,6 +158,93 @@ func EnsurePubKeyDir(pubKeyID string) (string, error) {
 	return dir, nil
 }
 
+func EnsureAgentPubKeyChainDir() error {
+	l := log.WithFields(log.Fields{
+		"pkg": "persist",
+		"fn":  "EnsureAgentPubKeyChainDir",
+	})
+	l.Info("ensuring pub key dir")
+	dir := RootDataDir + "/pubkeys"
+	AgentPubKeyChainDir = dir
+	if _, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				l.Errorf("failed to create pub key dir: %v", err)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func EnsurePubKeyChainDir(pubKeyID string) (string, error) {
+	l := log.WithFields(log.Fields{
+		"pkg": "persist",
+		"fn":  "EnsurePubKeyChainDir",
+	})
+	l.Info("ensuring pub key dir")
+	dir := PubKeyChainDir(pubKeyID)
+	if _, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				l.Errorf("failed to create pub key dir: %v", err)
+				return dir, err
+			}
+		}
+	}
+	return dir, nil
+}
+
+func EnsurePubKeyChainOutgoingDir(pubKeyID string) (string, error) {
+	l := log.WithFields(log.Fields{
+		"pkg": "persist",
+		"fn":  "EnsurePubKeyChainOutgoingDir",
+	})
+	l.Info("ensuring pub key dir")
+	dir := AgentOutgoingFilesDir + "/" + pubKeyID
+	if _, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				l.Errorf("failed to create pub key dir: %v", err)
+				return dir, err
+			}
+		}
+	}
+	l.Infof("outgoing files dir: %s", dir)
+	dir = AgentOutgoingMessagesDir + "/" + pubKeyID
+	if _, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, 0755); err != nil {
+				l.Errorf("failed to create pub key dir: %v", err)
+				return dir, err
+			}
+		}
+	}
+	l.Infof("outgoing messages dir: %s", dir)
+	return dir, nil
+}
+
+func RemovePubKeyChainOutgoingDir(pubKeyID string) (string, error) {
+	l := log.WithFields(log.Fields{
+		"pkg": "persist",
+		"fn":  "RemovePubKeyChainOutgoingDir",
+	})
+	l.Info("removing pub key dir")
+	dir := AgentOutgoingFilesDir + "/" + pubKeyID
+	// delete the directory and all of its contents
+	if err := os.RemoveAll(dir); err != nil {
+		l.Errorf("failed to remove pub key dir: %v", err)
+		return dir, err
+	}
+	dir = AgentOutgoingMessagesDir + "/" + pubKeyID
+	// delete the directory and all of its contents
+	if err := os.RemoveAll(dir); err != nil {
+		l.Errorf("failed to remove pub key dir: %v", err)
+		return dir, err
+	}
+	return dir, nil
+}
+
 func Init(rootDataDir, nodeName string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
@@ -194,11 +282,19 @@ func InitAgent(rootDataDir string) error {
 		l.Errorf("failed to ensure node data dir: %v", err)
 		return err
 	}
+	if err := EnsureAgentPubKeyChainDir(); err != nil {
+		l.Errorf("failed to ensure node data dir: %v", err)
+		return err
+	}
 	return nil
 }
 
 func PubKeyMessageDir(pubKeyID string) string {
 	return MessagesDir + "/" + pubKeyID
+}
+
+func PubKeyChainDir(pubKeyID string) string {
+	return AgentPubKeyChainDir + "/" + pubKeyID
 }
 
 func StoreMessage(pubKeyID string, id string, data []byte) error {

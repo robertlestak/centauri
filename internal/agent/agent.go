@@ -1,9 +1,7 @@
 package agent
 
 import (
-	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -12,6 +10,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/robertlestak/mp/internal/keys"
@@ -96,6 +95,7 @@ func Agent() error {
 		"fn":  "agent",
 	})
 	l.Info("agent")
+	go EnsureWatcher()
 	for {
 		if len(ServerAddrs) == 0 {
 			l.Error("no server addresses")
@@ -353,7 +353,13 @@ func DecryptMessageData(m *message.Message) (*message.Message, error) {
 		"fn":  "DecryptMessageData",
 	})
 	l.Info("decrypting message data")
-	decrypted, err := rsa.DecryptOAEP(sha1.New(), rand.Reader, PrivateKey, m.Data, nil)
+	priv := x509.MarshalPKCS1PrivateKey(PrivateKey)
+	kb := &pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: priv,
+	}
+	kbp := pem.EncodeToMemory(kb)
+	decrypted, err := keys.DecryptMessage(kbp, strings.TrimSpace(string(m.Data)))
 	if err != nil {
 		l.Errorf("error decrypting message data: %v", err)
 		return m, err

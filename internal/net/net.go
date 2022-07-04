@@ -2,6 +2,7 @@ package net
 
 import (
 	"encoding/json"
+	network "net"
 	"sync"
 	"time"
 
@@ -123,12 +124,20 @@ func ListMembers() []*memberlist.Node {
 	return List.Members()
 }
 
-func Create(nodeName string, addr string, advPort int, bindPort int) error {
+func Create(nodeName string, addr string, advPort int, bindPort int, connMode string, cidrsAllowed []network.IPNet) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "net",
 		"fn":  "Create",
 	})
-	cfg := memberlist.DefaultLocalConfig()
+	var cfg *memberlist.Config
+	if connMode == "wan" {
+		cfg = memberlist.DefaultWANConfig()
+	} else if connMode == "local" {
+		cfg = memberlist.DefaultLANConfig()
+	} else {
+		cfg = memberlist.DefaultLocalConfig()
+	}
+	cfg.CIDRsAllowed = cidrsAllowed
 	cfg.BindPort = bindPort
 	cfg.AdvertisePort = advPort
 	cfg.AdvertiseAddr = addr

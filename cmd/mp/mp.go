@@ -2,12 +2,14 @@ package main
 
 import (
 	"flag"
+	network "net"
 	"os"
 	"strings"
 	"sync"
 
 	"github.com/robertlestak/mp/internal/agent"
 	"github.com/robertlestak/mp/internal/events"
+	"github.com/robertlestak/mp/internal/keys"
 	"github.com/robertlestak/mp/internal/net"
 	"github.com/robertlestak/mp/internal/persist"
 	"github.com/robertlestak/mp/internal/server"
@@ -19,9 +21,11 @@ var (
 	wg                      sync.WaitGroup
 	flagAgentMode           *bool
 	flagAgentPrivateKeyPath *string
+	flagPeerConnectionMode  *string
 	flagPeerBindPort        *int
 	flagPeerAdvertisePort   *int
 	flagPeerAdvertiseAddr   *string
+	flagPeerAllowedCidrs    *string
 	flagServerPort          *string
 	flagPeerAddrs           *string
 	flagPeerName            *string
@@ -58,8 +62,31 @@ func peer() {
 		}
 		addrs = append(addrs, addr)
 	}
+	cidrSpl := strings.Split(*flagPeerAllowedCidrs, ",")
+	var cidrs []network.IPNet
+	for _, cidr := range cidrSpl {
+		if strings.TrimSpace(cidr) == "" {
+			continue
+		}
+		_, ipnet, err := network.ParseCIDR(cidr)
+		if err != nil {
+			l.Errorf("failed to parse cidr: %v", err)
+			os.Exit(1)
+		}
+		cidrs = append(cidrs, *ipnet)
+	}
+	if len(cidrs) == 0 {
+		cidrs = nil
+	}
 	var err error
-	err = net.Create(*flagPeerName, *flagPeerAdvertiseAddr, *flagPeerAdvertisePort, *flagPeerBindPort)
+	err = net.Create(
+		*flagPeerName,
+		*flagPeerAdvertiseAddr,
+		*flagPeerAdvertisePort,
+		*flagPeerBindPort,
+		*flagPeerConnectionMode,
+		cidrs,
+	)
 	if err != nil {
 		l.Errorf("failed to create peer: %v", err)
 		os.Exit(1)
@@ -117,6 +144,7 @@ func agnt() {
 		l.Errorf("failed to load private key: %v", err)
 		os.Exit(1)
 	}
+	go keys.PubKeyLoader(*flagDataDir + "/pubkeys")
 	if err := agent.Agent(); err != nil {
 		l.Errorf("failed to start agent: %v", err)
 		os.Exit(1)
@@ -130,16 +158,18 @@ func main() {
 	})
 	l.Info("starting")
 	flagAgentMode = flag.Bool("agent", false, "run as agent")
-	flagAgentPrivateKeyPath = flag.String("key", "", "path to private key for agent")
+	flagAgentPrivateKeyPath = flag.String("agent-key", "", "path to private key for agent")
 	flagPeerMode = flag.Bool("peer", false, "run as peer")
 	flagPeerBindPort = flag.Int("peer-bind-port", 0, "peer port to bind")
 	flagPeerAdvertisePort = flag.Int("peer-advertise-port", 0, "peer port to advertise")
 	flagPeerAdvertiseAddr = flag.String("peer-advertise-addr", "", "peer address to advertise")
 	flagPeerAddrs = flag.String("peer-addrs", "", "addresses to join")
+	flagPeerAllowedCidrs = flag.String("peer-cidrs", "", "cidrs to allow. comma separated. empty for all")
+	flagPeerConnectionMode = flag.String("peer-mode", "lan", "peer connection mode (lan, wan, local)")
 	flagServerMode = flag.Bool("server", false, "run as server")
 	flagUpstreamServerAddrs = flag.String("server-addrs", "", "addresses to join as an agent")
 	flagServerPort = flag.String("server-port", "8080", "port to use for server")
-	flagPeerName = flag.String("name", "", "name of this node")
+	flagPeerName = flag.String("peer-name", "", "name of this node")
 	flagDataDir = flag.String("data", "", "data directory")
 	flagHelp = flag.Bool("help", false, "show help")
 	flag.Parse()
