@@ -37,8 +37,9 @@ var (
 )
 
 type MessageMeta struct {
-	ID   string `json:"id"`
-	Size int64  `json:"size"`
+	ID        string    `json:"id"`
+	Size      int64     `json:"size"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type GetJob struct {

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/robertlestak/centauri/internal/keys"
 	log "github.com/sirupsen/logrus"
@@ -37,9 +38,10 @@ func sendOutput(data []byte, out string) error {
 
 func messageListTable(msgs []MessageMeta) string {
 	var tbl string
-	tbl += "ID\tSize\n"
+	tbl += "ID\tSize\tCreatedAt\n"
 	for _, msg := range msgs {
-		tbl += msg.ID + "\t" + strconv.Itoa(int(msg.Size)) + "\n"
+		strTime := msg.CreatedAt.Format(time.RFC3339)
+		tbl += msg.ID + "\t" + strconv.Itoa(int(msg.Size)) + "\t" + strTime + "\n"
 	}
 	return tbl
 }

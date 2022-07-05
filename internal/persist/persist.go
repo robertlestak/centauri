@@ -24,10 +24,11 @@ var (
 )
 
 type MessageMetaData struct {
-	ID       string `json:"id"`
-	Channel  string `json:"channel"`
-	PubKeyID string `json:"pubkey_id"`
-	Size     int64  `json:"size"`
+	ID        string    `json:"id"`
+	Channel   string    `json:"channel"`
+	PubKeyID  string    `json:"pubkey_id"`
+	Size      int64     `json:"size"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func PubKeyMessageDir(pubKeyID string) string {
@@ -103,10 +104,11 @@ func ListMessageMetaForPubKeyID(pubKeyID string, channel string) ([]MessageMetaD
 		} else {
 			size := stat.Size()
 			md = append(md, MessageMetaData{
-				ID:       id,
-				PubKeyID: pubKeyID,
-				Size:     size,
-				Channel:  channel,
+				ID:        id,
+				PubKeyID:  pubKeyID,
+				Size:      size,
+				Channel:   channel,
+				CreatedAt: stat.ModTime(),
 			})
 		}
 	}
