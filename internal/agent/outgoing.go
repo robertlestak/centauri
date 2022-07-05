@@ -14,6 +14,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	// PendingOutgoingMessages is a map of pending outgoing messages with the time the file last changed on system
+	// this is a poor-man's way of ensuring a larger file is not picked up mid-copy.
+	PendingOutgoingMessages []string
+	PendingOutgoingFiles    []string
+)
+
 func GetOutgoingMessages() ([]string, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
@@ -116,16 +123,99 @@ func handleOutgoingFiles(files []string) error {
 		"fn":  "handleOutgoingFiles",
 	})
 	l.Debug("handling outgoing files")
+
 	for _, file := range files {
-		dir, fn := filepath.Split(file)
-		key := filepath.Base(dir)
-		l.Debugf("handling file %s for key %s", fn, key)
-		if err := handleOutgoingFile(file, DefaultChannel, key, fn); err != nil {
-			l.Errorf("error handling outgoing file: %v", err)
-			return err
+		for _, fp := range PendingOutgoingFiles {
+			if fp == file {
+				return nil
+			}
 		}
+		PendingOutgoingFiles = append(PendingOutgoingFiles, file)
 	}
 	return nil
+}
+
+func removeFromSlice(s []string, s2 string) []string {
+	for i, v := range s {
+		if v == s2 {
+			return append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
+
+func outgoingFileWorker() {
+	l := log.WithFields(log.Fields{
+		"pkg": "agent",
+		"fn":  "outgoingFileWorker",
+	})
+	l.Debug("starting outgoing file worker")
+	for {
+		if len(PendingOutgoingFiles) == 0 {
+			l.Debug("no pending outgoing files")
+			time.Sleep(time.Second * 10)
+			continue
+		}
+		l.Debugf("pending outgoing files: %v", PendingOutgoingFiles)
+		for _, fp := range PendingOutgoingFiles {
+			// check time file modified
+			fi, err := os.Stat(fp)
+			if err != nil {
+				l.Errorf("error getting file info: %v", err)
+				continue
+			}
+			if time.Since(fi.ModTime()) > time.Second*60 {
+				l.Debugf("file %s has not changed, uploading", fp)
+				dir, fn := filepath.Split(fp)
+				key := filepath.Base(dir)
+				l.Debugf("handling file %s for key %s", fn, key)
+				if err := handleOutgoingFile(fp, DefaultChannel, key, fn); err != nil {
+					l.Errorf("error handling outgoing file: %v", err)
+					continue
+				}
+				// remove from pending array
+				PendingOutgoingFiles = removeFromSlice(PendingOutgoingFiles, fp)
+			}
+		}
+		time.Sleep(time.Second * 10)
+	}
+}
+
+func outgoingMessageWorker() {
+	l := log.WithFields(log.Fields{
+		"pkg": "agent",
+		"fn":  "outgoingMessageWorker",
+	})
+	l.Debug("starting outgoing message worker")
+	for {
+		if len(PendingOutgoingMessages) == 0 {
+			l.Debug("no pending outgoing messages")
+			time.Sleep(time.Second * 1)
+			continue
+		}
+		l.Debugf("pending outgoing messages: %v", PendingOutgoingMessages)
+		for _, fp := range PendingOutgoingMessages {
+			// check time file modified
+			fi, err := os.Stat(fp)
+			if err != nil {
+				l.Errorf("error getting file info: %v", err)
+				continue
+			}
+			if time.Since(fi.ModTime()) > time.Second*10 {
+				l.Debugf("file %s has not changed, uploading", fp)
+				dir, fn := filepath.Split(fp)
+				key := filepath.Base(dir)
+				l.Debugf("handling file %s for key %s", fn, key)
+				if err := handleOutgoingMessage(fp, key, fn); err != nil {
+					l.Errorf("error handling outgoing file: %v", err)
+					continue
+				}
+				// remove from pending array
+				PendingOutgoingMessages = removeFromSlice(PendingOutgoingMessages, fp)
+			}
+		}
+		time.Sleep(time.Second * 1)
+	}
 }
 
 func handleOutgoingMessage(fp, pubKeyID, id string) error {
@@ -165,14 +255,13 @@ func handleOutgoingMessages(msgs []string) error {
 		"fn":  "handleOutgoingMessages",
 	})
 	l.Debug("handling outgoing messages")
-	for _, msg := range msgs {
-		dir, fn := filepath.Split(msg)
-		key := filepath.Base(dir)
-		l.Debugf("handling message %s for key %s", fn, key)
-		if err := handleOutgoingMessage(msg, key, fn); err != nil {
-			l.Errorf("error handling outgoing message: %v", err)
-			return err
+	for _, m := range msgs {
+		for _, mp := range PendingOutgoingMessages {
+			if mp == m {
+				return nil
+			}
 		}
+		PendingOutgoingMessages = append(PendingOutgoingMessages, m)
 	}
 	return nil
 }
@@ -183,6 +272,8 @@ func EnsureWatcher() error {
 		"fn":  "EnsureWatcher",
 	})
 	l.Debug("ensuring outgoing watcher")
+	go outgoingFileWorker()
+	go outgoingMessageWorker()
 	for {
 		err := StartWatcher()
 		if err != nil {

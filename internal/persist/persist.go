@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -210,10 +211,11 @@ func DeleteMessageByID(pubKeyID string, channel string, id string) error {
 		l.Errorf("failed to delete file: %v", err)
 		return err
 	}
-	return DeleteDirIfEmpty(mdir)
+	return DeleteDirIfEmpty(mdir + "/" + channel)
 }
 
-// TODO: fix
+//  DeleteDirIfEmpty deletes the specified directory if it is empty.
+// If the directory is deleted, check the parent directory and delete it if empty.
 func DeleteDirIfEmpty(dir string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
@@ -221,34 +223,68 @@ func DeleteDirIfEmpty(dir string) error {
 		"dir": dir,
 	})
 	l.Debug("deleting dir if empty")
-	// loop through dir and if there are empty dirs, delete them
-	// if this dir is empty, delete it
+	// check if dir exists
+	if _, err := os.Stat(dir); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		l.Errorf("failed to stat dir: %v", err)
+		return err
+	}
+	// check if dir is empty
 	files, err := filepath.Glob(dir + "/*")
 	if err != nil {
 		l.Errorf("failed to glob dir: %v", err)
 		return err
 	}
-	for _, file := range files {
-		if stat, err := os.Stat(file); err != nil {
-			l.Errorf("failed to stat file: %v", err)
-			return err
-		} else if stat.IsDir() {
-			if err := DeleteDirIfEmpty(file); err != nil {
-				l.Errorf("failed to delete dir: %v", err)
-				return err
-			}
-		}
+	if len(files) > 0 {
+		return nil
 	}
-	if len(files) == 0 {
-		if err := os.Remove(dir); err != nil {
-			l.Errorf("failed to remove dir: %v", err)
-			return err
-		}
+	// delete dir
+	if err := os.RemoveAll(dir); err != nil {
+		l.Errorf("failed to delete dir: %v", err)
+		return err
+	}
+	// check if parent dir is empty
+	parent := filepath.Dir(dir)
+	if parent == MessagesDir || parent == RootDataDir {
+		return nil
+	}
+	if err := DeleteDirIfEmpty(parent); err != nil {
+		l.Errorf("failed to delete parent dir: %v", err)
+		return err
 	}
 	return nil
 }
 
-// TODO: fix
+func getFilesOlderThan(dir string, dur time.Duration) ([]string, error) {
+	l := log.WithFields(log.Fields{
+		"pkg": "persist",
+		"fn":  "getFilesOlderThan",
+	})
+	l.Debug("getting files older than")
+	// recurse through dir and get all files older than dur
+	var files []string
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			l.Errorf("failed to walk dir: %v", err)
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if time.Since(info.ModTime()) > dur {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		l.Errorf("failed to walk dir: %v", err)
+		return nil, err
+	}
+	return files, nil
+}
+
 func cleanupOldFiles(dur time.Duration) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "persist",
@@ -258,49 +294,42 @@ func cleanupOldFiles(dur time.Duration) error {
 	// loop through MessagesDir recursivevely
 	// the directory name is the pubKeyID and the file name is the messageID
 	// if the file is older than dur, delete it
-	deletions := make(map[string][]string)
+	type Deletion struct {
+		PubKeyID string
+		Channel  string
+		ID       string
+	}
+	deletions := []Deletion{}
 	// walk file tree
-	err := filepath.Walk(MessagesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			l.Errorf("failed to walk file tree: %v", err)
-			return err
-		}
-		// if file is a directory, it is a pubKeyID dir or channel dir
-		if info.IsDir() {
-			// get pubKeyID
-			pubKeyID := filepath.Base(path)
-			// get list of files in pubKeyID
-			files, err := ioutil.ReadDir(path)
-			if err != nil {
-				l.Errorf("failed to read dir: %v", err)
-				return err
-			}
-			// loop through files in pubKeyID
-			for _, file := range files {
-				// get messageID
-				messageID := file.Name()
-				// check if file is older than dur
-				if time.Since(file.ModTime()) > dur {
-					// delete file
-					deletions[pubKeyID] = append(deletions[pubKeyID], messageID)
-				}
-			}
-		}
-		return nil
-	})
+	deleteFiles, err := getFilesOlderThan(MessagesDir, dur)
 	if err != nil {
-		l.Errorf("failed to walk file tree: %v", err)
+		l.Errorf("failed to get files older than: %v", err)
 		return err
 	}
+	for _, file := range deleteFiles {
+		// file path in format:
+		// MessagesDir/pubKeyID/channel/messageID
+		// split on / to get pubKeyID, channel, and messageID
+		// first, remove MessagesDir from path
+		file = strings.Replace(file, MessagesDir, "", 1)
+		// split on / to get pubKeyID, channel, and messageID
+		parts := strings.Split(file, "/")
+		if len(parts) != 3 {
+			l.Errorf("invalid file path: %v", file)
+			continue
+		}
+		deletions = append(deletions, Deletion{
+			PubKeyID: parts[0],
+			Channel:  parts[1],
+			ID:       parts[2],
+		})
+	}
 	// delete files
-	for pubKeyID, messageIDs := range deletions {
-		for _, messageID := range messageIDs {
-			channel := "default"
-			err := DeleteMessageByID(pubKeyID, channel, messageID)
-			if err != nil {
-				l.Errorf("failed to delete message: %v", err)
-				return err
-			}
+	for _, deletion := range deletions {
+		err := DeleteMessageByID(deletion.PubKeyID, deletion.Channel, deletion.ID)
+		if err != nil {
+			l.Errorf("failed to delete message: %v", err)
+			return err
 		}
 	}
 	return nil
