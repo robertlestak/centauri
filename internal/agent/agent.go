@@ -312,12 +312,12 @@ func CheckPendingMessages(channel string) ([]MessageMeta, error) {
 	var msgs []MessageMeta
 	saddr := GetAgentServer()
 	c := &http.Client{}
-	sig, keyID, err := CreateSignature()
+	sig, _, err := CreateSignature()
 	if err != nil {
 		l.Errorf("error creating signature: %v", err)
 		return msgs, err
 	}
-	addr := saddr + "/message/" + keyID + "/meta"
+	addr := saddr + "/message/meta"
 	if channel != "" {
 		addr = addr + "?channel=" + channel
 	}

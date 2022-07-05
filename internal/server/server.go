@@ -44,22 +44,15 @@ func HandleListMesageMetaForPublicKey(w http.ResponseWriter, r *http.Request) {
 		"fn":  "HandleListMessageMetaForPublicKey",
 	})
 	l.Debug("listing message meta for public key")
-	vars := mux.Vars(r)
-	keyID := vars["keyID"]
-	channel := r.URL.Query().Get("channel")
+	channel := message.CleanString(r.URL.Query().Get("channel"))
 	pubKeyID, err := ValidateSignedRequest(r)
 	if err != nil {
 		l.Errorf("error validating signed request: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if keyID != pubKeyID {
-		l.Errorf("key id mismatch: %v != %v", keyID, pubKeyID)
-		http.Error(w, "key id mismatch", http.StatusBadRequest)
-		return
-	}
-	l.Debugf("listing message meta for public key: %v", keyID)
-	messages, err := message.ListMessageMetaForPubKeyID(keyID, channel)
+	l.Debugf("listing message meta for public key: %v", pubKeyID)
+	messages, err := message.ListMessageMetaForPubKeyID(pubKeyID, channel)
 	if err != nil {
 		l.Errorf("error listing message meta for public key: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -80,7 +73,7 @@ func HandleGetMessageByID(w http.ResponseWriter, r *http.Request) {
 	l.Debug("getting message by id")
 	vars := mux.Vars(r)
 	id := vars["id"]
-	channel := vars["channel"]
+	channel := message.CleanString(vars["channel"])
 	keyID := vars["keyID"]
 	pubKeyID, err := ValidateSignedRequest(r)
 	if err != nil {
@@ -111,7 +104,7 @@ func HandleDeleteMessageByID(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
 	keyID := vars["keyID"]
-	channel := vars["channel"]
+	channel := message.CleanString(vars["channel"])
 	pubKeyID, err := ValidateSignedRequest(r)
 	if err != nil {
 		l.Errorf("error validating signed request: %v", err)
@@ -183,7 +176,7 @@ func Server(port string, authToken string) error {
 	}
 
 	r.HandleFunc("/message", HandleCreateMessage).Methods("POST")
-	r.HandleFunc("/message/{keyID}/meta", HandleListMesageMetaForPublicKey).Methods("LIST")
+	r.HandleFunc("/message/meta", HandleListMesageMetaForPublicKey).Methods("LIST")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
 

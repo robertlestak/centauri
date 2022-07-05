@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
+	"regexp"
 
 	"github.com/google/uuid"
 	"github.com/robertlestak/centauri/internal/events"
@@ -46,6 +47,21 @@ func validateType(t string) error {
 	return nil
 }
 
+// CleanString will clean the string to [a-zA-Z0-9_]
+func CleanString(s string) string {
+	// given input s, replace all characters that are not a-zA-Z0-9_ with _
+	var ns string
+	for _, r := range s {
+		rx := regexp.MustCompile(`[^a-zA-Z0-9\-]`)
+		if !rx.MatchString(string(r)) {
+			ns += string(r)
+		} else {
+			ns += "-"
+		}
+	}
+	return ns
+}
+
 func (m *Message) Create() (*Message, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "message",
@@ -65,13 +81,7 @@ func (m *Message) Create() (*Message, error) {
 		return nil, err
 	}
 	m.ID = uuid.New().String()
-	//m.PublicKeyID = sign.PubKeyID(m.PublicKeyBytes)
-	// enc, err := RsaEncrypt(m.PublicKeyBytes, m.Data)
-	// if err != nil {
-	// 	l.Errorf("error encrypting data: %v", err)
-	// 	return nil, err
-	// }
-	// m.Data = enc
+	m.Channel = CleanString(m.Channel)
 	if err := m.StoreLocal(); err != nil {
 		l.Errorf("error storing message: %v", err)
 		return nil, err
@@ -89,6 +99,7 @@ func (m *Message) StoreLocal() error {
 		"fn":  "StoreLocal",
 	})
 	l.Debug("storing message locally")
+	m.Channel = CleanString(m.Channel)
 	if err := persist.StoreMessage(m.PublicKeyID, m.Channel, m.ID, m.Data); err != nil {
 		l.Errorf("error storing message: %v", err)
 		return err
@@ -104,6 +115,7 @@ func ListMessageMetaForPubKeyID(pubKeyID string, channel string) ([]persist.Mess
 		"ch":  channel,
 	})
 	l.Debug("listing messages for public key")
+	channel = CleanString(channel)
 	return persist.ListMessageMetaForPubKeyID(pubKeyID, channel)
 }
 
@@ -113,6 +125,7 @@ func GetMessageByID(pubKeyID string, channel string, id string) (*Message, error
 		"fn":  "GetMessageByID",
 	})
 	l.Debug("getting message by id")
+	channel = CleanString(channel)
 	data, err := persist.GetMessageByID(pubKeyID, channel, id)
 	if err != nil {
 		l.Errorf("error getting message: %v", err)
@@ -133,6 +146,7 @@ func GetMessageFromPeer(pubKeyID string, channel string, id string, data []byte)
 		"fn":  "GetMessageFromPeer",
 	})
 	l.Debug("getting message from peer")
+	channel = CleanString(channel)
 	msg := &Message{
 		Type:        "message",
 		ID:          id,
@@ -153,6 +167,7 @@ func DeleteMessageByID(pubKeyID string, channel string, id string, eventTrigger 
 		"fn":  "DeleteMessageByID",
 	})
 	l.Debug("deleting message by id")
+	channel = CleanString(channel)
 	if err := persist.DeleteMessageByID(pubKeyID, channel, id); err != nil {
 		l.Errorf("error deleting message: %v", err)
 		return err
@@ -178,6 +193,7 @@ func CreateMessage(mType string, fileName string, channel string, pubKeyID strin
 	l.Debug("creating message")
 	var pubKey []byte
 	// get public key for pubKeyID
+	channel = CleanString(channel)
 	if k, ok := keys.PublicKeyChain[pubKeyID]; !ok {
 		l.Errorf("public key not found: %s", pubKeyID)
 		return nil, errors.New("public key not found")

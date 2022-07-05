@@ -37,7 +37,7 @@ go run cmd/centauri/*.go \
     -agent -agent-key ~/Desktop/private-key.pem \
     -server-addrs http://localhost:8080
 
-curl -X LIST "localhost:8081/message/$PUBKEYID/meta" -H "X-Signature: $SIG"
+curl -X LIST "localhost:8081/message/meta" -H "X-Signature: $SIG"
 
 curl -X GET "localhost:8081/message/$PUBKEYID/83e7ab0a-2a92-4b8b-96d4-6d0f444efa72" -H "X-Signature: $SIG"
 
