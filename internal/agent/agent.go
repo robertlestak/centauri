@@ -38,6 +38,7 @@ var (
 
 type MessageMeta struct {
 	ID        string    `json:"id"`
+	Channel   string    `json:"channel"`
 	Size      int64     `json:"size"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -131,6 +132,10 @@ func Agent() error {
 		"fn":  "agent",
 	})
 	l.Debug("agent")
+	if err := persist.EnsureDir(persist.RootDataDir + "/pubkeys"); err != nil {
+		l.Errorf("error ensuring pubkeys dir: %v", err)
+		return err
+	}
 	go EnsureWatcher()
 	for {
 		if len(ServerAddrs) == 0 {
@@ -157,7 +162,7 @@ func Agent() error {
 		}
 		for _, m := range msgs {
 			j := GetJob{
-				Channel: DefaultChannel,
+				Channel: m.Channel,
 				ID:      m.ID,
 			}
 			jobs <- j
