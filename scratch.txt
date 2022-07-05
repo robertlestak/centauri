@@ -17,17 +17,24 @@ DATA=`echo -n $TSJ | base64 -w0`
 JD='{"public_key":"'$PUBKEY'","data":"'$DATA'","signature":"'$SIG'"}'
 SIG=`echo $JD | base64 -w0`
 
-go run cmd/mp/*.go \
+go run cmd/centauri/*.go peer \
     -data data -name foo \
-    -peer -peer-advertise-port 50001 \
-    -peer-bind-port 50001 -server \
-    -server-port 8080 -peer-mode local
+    -advertise-port 50001 \
+    -bind-port 50001 \
+    -server-port 8080 -mode local
 
 
+go run cmd/centauri/*.go peer \
+    -data data -name foo2 \
+    -advertise-port 50002 \
+    -bind-port 50002 \
+    -server-port 8081 -mode local \
+    -addrs "localhost:50001"
 
-go run cmd/mp/*.go \
+
+go run cmd/centauri/*.go \
     -data data2 \
-    -agent -key ~/Desktop/private-key.pem \
+    -agent -agent-key ~/Desktop/private-key.pem \
     -server-addrs http://localhost:8080
 
 curl -X LIST "localhost:8081/message/$PUBKEYID/meta" -H "X-Signature: $SIG"
@@ -43,9 +50,10 @@ curl -X DELETE "localhost:8080/message/$PUBKEYID/acb21598-b778-42a4-b1f7-ddeecbb
 
 curl 'localhost:8080/message' -d '{"type": "message", "public_key_id": "'$PUBKEYID'", "data": "'`echo hello | openssl rsautl -encrypt -oaep -pubin -inkey ~/Desktop/pub.pub | base64`'"}'
 
-KEY=`aesgcm -new -len 32`
+PUBKEYID=`cat ~/Desktop/pub.pub | shasum -a 256 | awk '{print $1}'`
+KEY=`aesgcm -g -l 32`
 
-ENCRYPTED_DATA="`echo "file:hello.txt|hello world" | aesgcm -k $KEY -enc`"
+ENCRYPTED_DATA="`echo "hello world" | aesgcm -k $KEY -e`"
 NONCE="`echo \"$ENCRYPTED_DATA\" | head -n1 | awk -F': ' '{print $2}'`"
 CIPHERTEXT="`echo \"$ENCRYPTED_DATA\" | tail -n1 | awk -F': ' '{print $2}'`"
 

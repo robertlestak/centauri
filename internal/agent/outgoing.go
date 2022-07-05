@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -226,5 +227,25 @@ func SendMessageThroughPeer(msg *message.Message) error {
 		return err
 	}
 	l.Infof("message sent: %v", msg.ID)
+	return nil
+}
+
+func sendMessage(channel, pubKeyID, mType, fn string, data io.ReadCloser) error {
+	l := log.WithFields(log.Fields{
+		"pkg": "agent",
+		"fn":  "sendMessage",
+		"key": pubKeyID,
+		"id":  fn,
+	})
+	l.Info("sending message")
+	m, err := message.CreateMessage(mType, fn, channel, pubKeyID, data)
+	if err != nil {
+		l.Errorf("error creating message: %v", err)
+		return err
+	}
+	if err := SendMessageThroughPeer(m); err != nil {
+		l.Errorf("error sending message: %v", err)
+		return err
+	}
 	return nil
 }

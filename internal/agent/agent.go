@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -21,11 +22,18 @@ import (
 )
 
 var (
-	ServerAddrs     []string
-	ServerAuthToken string
-	DefaultChannel  string = "default"
-	PrivateKey      *rsa.PrivateKey
-	lastServer      int
+	ServerAddrs              []string
+	ServerAuthToken          string
+	DefaultChannel           string = "default"
+	PrivateKey               *rsa.PrivateKey
+	lastServer               int
+	Output                   string
+	OutputFormat             string = "json"
+	ClientMessageID          string
+	ClientRecipientPublicKey []byte
+	ClientMessageInput       string
+	ClientMessageType        string
+	ClientMessageFileName    string
 )
 
 type MessageMeta struct {
@@ -38,6 +46,57 @@ type GetJob struct {
 	ID      string
 }
 
+func getMessageData(channel, id string) (*message.Message, string, error) {
+	l := log.WithFields(log.Fields{
+		"pkg": "agent",
+		"fn":  "getMessageData",
+	})
+	l.Infof("getting message %s", id)
+	m, err := GetMessage(channel, id)
+	if err != nil {
+		l.Errorf("error getting message %s: %v", id, err)
+		return nil, "", err
+	}
+	if m == nil {
+		l.Errorf("message %s not found", id)
+		return nil, "", fmt.Errorf("message %s not found", id)
+	}
+	m, err = DecryptMessageData(m)
+	if err != nil {
+		l.Errorf("error getting message %s: %v", id, err)
+		return nil, "", err
+	}
+	fn := id
+	// check if data has optional file metadata prefix
+	// format:
+	// file:<filename>|<[]byte of file data>
+	// get first 4 bytes of data to check if it is a file
+	var firstFileByte int
+	var mtype string
+	mtype = "message"
+	if len(m.Data) > 4 {
+		ff := m.Data[:4]
+		if string(ff) == "file" {
+			var nfn string
+			// get value between "file:" and "|"
+			for i := 5; i < len(m.Data); i++ {
+				if m.Data[i] == '|' {
+					nfn = string(m.Data[5:i])
+					firstFileByte = i + 1
+					m.Data = m.Data[firstFileByte:]
+					break
+				}
+			}
+			if nfn != "" {
+				fn = nfn
+				mtype = "file"
+			}
+		}
+	}
+	m.Type = mtype
+	return m, fn, nil
+}
+
 func getMessageWorker(jobs chan GetJob, res chan error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
@@ -45,44 +104,13 @@ func getMessageWorker(jobs chan GetJob, res chan error) {
 	})
 	for job := range jobs {
 		l.Infof("getting message %s", job.ID)
-		m, err := GetMessage(job.Channel, job.ID)
+		m, fn, err := getMessageData(job.Channel, job.ID)
 		if err != nil {
 			l.Errorf("error getting message %s: %v", job.ID, err)
 			res <- err
 			continue
 		}
-		m, err = DecryptMessageData(m)
-		if err != nil {
-			l.Errorf("error decrypting message %s: %v", job.ID, err)
-		}
-		fn := m.ID
-		// check if data has optional file metadata prefix
-		// format:
-		// file:<filename>|<[]byte of file data>
-		// get first 4 bytes of data to check if it is a file
-		var firstFileByte int
-		var mtype string
-		mtype = "message"
-		if len(m.Data) > 4 {
-			ff := m.Data[:4]
-			if string(ff) == "file" {
-				var nfn string
-				// get value between "file:" and "|"
-				for i := 5; i < len(m.Data); i++ {
-					if m.Data[i] == '|' {
-						nfn = string(m.Data[5:i])
-						firstFileByte = i + 1
-						m.Data = m.Data[firstFileByte:]
-						break
-					}
-				}
-				if nfn != "" {
-					fn = nfn
-					mtype = "file"
-				}
-			}
-		}
-		if err := persist.StoreAgentMessage(job.Channel, fn, mtype, m.Data); err != nil {
+		if err := persist.StoreAgentMessage(job.Channel, fn, m.Type, m.Data); err != nil {
 			l.Errorf("error storing message %s: %v", job.ID, err)
 			res <- err
 			continue
@@ -142,6 +170,37 @@ func Agent() error {
 		}
 		l.Info("got all messages")
 		time.Sleep(time.Second * 10)
+	}
+}
+
+func Client() error {
+	l := log.WithFields(log.Fields{
+		"pkg": "agent",
+		"fn":  "Client",
+	})
+	l.Info("client")
+	if len(ServerAddrs) == 0 {
+		l.Error("no server addresses")
+		return fmt.Errorf("no server addresses")
+	}
+	var action string
+	// get action from command line
+	// second arg is action
+	if len(os.Args) > 2 {
+		action = os.Args[2]
+	}
+	l.Infof("action: %s", action)
+	switch action {
+	case "confirm":
+		return ConfirmMessageReceive(DefaultChannel, ClientMessageID)
+	case "get":
+		return getMessage(DefaultChannel, ClientMessageID, Output)
+	case "list":
+		return listMessages(DefaultChannel, OutputFormat, Output)
+	case "send":
+		return sendMessageFromInput()
+	default:
+		return fmt.Errorf("unknown action: %s", action)
 	}
 }
 
@@ -232,7 +291,7 @@ func CreateSignature() (string, string, error) {
 		l.Errorf("error marshalling signature request: %v", err)
 		return "", "", err
 	}
-	keyID := sign.PubKeyID(publicKeyPem)
+	keyID := keys.PubKeyID(publicKeyPem)
 	l.Infof("key ID: %s", keyID)
 	return base64.StdEncoding.EncodeToString(j), keyID, nil
 }
@@ -350,6 +409,10 @@ func ConfirmMessageReceive(channel, id string) error {
 	if err != nil {
 		l.Errorf("error creating signature: %v", err)
 		return err
+	}
+	if channel == "" || id == "" {
+		l.Errorf("error: channel or id is empty")
+		return errors.New("error: channel or id is empty")
 	}
 	addr := saddr + "/message/" + keyID + "/" + channel + "/" + id
 	req, err := http.NewRequest("DELETE", addr, nil)

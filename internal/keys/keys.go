@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -32,6 +33,11 @@ type MessageHeader struct {
 	Nonce string `json:"n"`
 }
 
+func PubKeyID(pubKeyBytes []byte) string {
+	h := sha256.Sum256(pubKeyBytes)
+	return fmt.Sprintf("%x", h[:])
+}
+
 func BytesToPubKey(publicKey []byte) (*rsa.PublicKey, error) {
 	block, _ := pem.Decode(publicKey)
 	if block == nil {
@@ -55,6 +61,19 @@ func BytesToPrivKey(privateKey []byte) (*rsa.PrivateKey, error) {
 		return nil, err
 	}
 	return priv, nil
+}
+
+func AddKeyToPublicChain(k []byte) {
+	l := log.WithFields(log.Fields{
+		"pkg": "keys",
+		"fn":  "AddKeyToPublicChain",
+	})
+	l.Info("Adding key to public chain")
+	keyID := PubKeyID(k)
+	if PublicKeyChain == nil {
+		PublicKeyChain = make(map[string][]byte)
+	}
+	PublicKeyChain[keyID] = k
 }
 
 func LoadPubKeyChainFromDirectory(d string) error {

@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/robertlestak/centauri/internal/keys"
@@ -22,11 +21,6 @@ type SignedRequest struct {
 
 type SignedMessageData struct {
 	Timestamp int64 `json:"timestamp"`
-}
-
-func PubKeyID(pubKeyBytes []byte) string {
-	h := sha256.Sum256(pubKeyBytes)
-	return fmt.Sprintf("%x", h[:])
 }
 
 func HashSumMessage(msg []byte) []byte {
@@ -73,7 +67,7 @@ func (r *SignedRequest) VerifyOwnsID(id string) error {
 	if err := r.Verify(); err != nil {
 		return err
 	}
-	if PubKeyID(r.PublicKey) != id {
+	if keys.PubKeyID(r.PublicKey) != id {
 		return errors.New("public key does not own ID")
 	}
 	return nil

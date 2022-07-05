@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io/ioutil"
 	network "net"
 	"os"
 	"strings"
@@ -18,24 +20,33 @@ import (
 )
 
 var (
-	wg                      sync.WaitGroup
-	flagAgentMode           *bool
-	flagAgentChannel        *string
-	flagAgentPrivateKeyPath *string
-	flagPeerConnectionMode  *string
-	flagPeerBindPort        *int
-	flagPeerAdvertisePort   *int
-	flagPeerAdvertiseAddr   *string
-	flagPeerAllowedCidrs    *string
-	flagServerPort          *string
-	flagPeerAddrs           *string
-	flagPeerName            *string
-	flagDataDir             *string
-	flagPeerMode            *bool
-	flagServerMode          *bool
-	flagServerAuthToken     *string
-	flagUpstreamServerAddrs *string
-	flagHelp                *bool
+	wg                           sync.WaitGroup
+	flagAgentMode                *bool
+	flagAgentChannel             *string
+	flagAgentPrivateKeyPath      *string
+	flagClientMode               *bool
+	flagClientOutput             *string
+	flagClientOutputFormat       *string
+	flagClientPrivateKeyPath     *string
+	flagClientRecipientPublicKey *string
+	flagClientMessageType        *string
+	flagClientMessageFileName    *string
+	flagClientMessageInput       *string
+	flagClientMessageID          *string
+	flagPeerConnectionMode       *string
+	flagPeerBindPort             *int
+	flagPeerAdvertisePort        *int
+	flagPeerAdvertiseAddr        *string
+	flagPeerAllowedCidrs         *string
+	flagServerPort               *string
+	flagPeerAddrs                *string
+	flagPeerName                 *string
+	flagDataDir                  *string
+	flagPeerMode                 *bool
+	flagServerMode               *bool
+	flagServerAuthToken          *string
+	flagUpstreamServerAddrs      *string
+	flagHelp                     *bool
 )
 
 func init() {
@@ -133,6 +144,10 @@ func agnt() {
 		l.Errorf("failed to init persist: %v", err)
 		os.Exit(1)
 	}
+	if flagUpstreamServerAddrs == nil {
+		l.Error("no upstream server addrs specified")
+		os.Exit(1)
+	}
 	ss := strings.Split(*flagUpstreamServerAddrs, ",")
 	var addrs []string
 	for _, addr := range ss {
@@ -157,45 +172,147 @@ func agnt() {
 	}
 }
 
+func clnt() {
+	l := log.WithFields(log.Fields{
+		"pkg": "main",
+		"fn":  "clnt",
+	})
+	l.Info("starting")
+	if flagUpstreamServerAddrs == nil {
+		l.Error("no upstream server addrs specified")
+		os.Exit(1)
+	}
+	ss := strings.Split(*flagUpstreamServerAddrs, ",")
+	var addrs []string
+	for _, addr := range ss {
+		if strings.TrimSpace(addr) == "" {
+			continue
+		}
+		addrs = append(addrs, addr)
+	}
+	agent.ServerAddrs = addrs
+	if err := agent.LoadPrivateKeyFromFile(*flagClientPrivateKeyPath); err != nil {
+		l.Errorf("failed to load private key: %v", err)
+		os.Exit(1)
+	}
+	if flagClientRecipientPublicKey != nil && *flagClientRecipientPublicKey != "" {
+		if *flagClientRecipientPublicKey == "-" {
+			var err error
+			agent.ClientRecipientPublicKey, err = ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				l.Errorf("failed to read public key: %v", err)
+				os.Exit(1)
+			}
+		} else {
+			// read from file
+			var err error
+			agent.ClientRecipientPublicKey, err = ioutil.ReadFile(*flagClientRecipientPublicKey)
+			if err != nil {
+				l.Errorf("failed to read public key: %v", err)
+				os.Exit(1)
+			}
+		}
+		keys.AddKeyToPublicChain(agent.ClientRecipientPublicKey)
+	}
+	agent.DefaultChannel = *flagAgentChannel
+	agent.Output = *flagClientOutput
+	agent.OutputFormat = *flagClientOutputFormat
+	agent.ClientMessageID = *flagClientMessageID
+	agent.ClientMessageType = *flagClientMessageType
+	agent.ClientMessageFileName = *flagClientMessageFileName
+	agent.ClientMessageInput = *flagClientMessageInput
+	if *flagServerAuthToken != "" {
+		agent.ServerAuthToken = *flagServerAuthToken
+	}
+	if err := agent.Client(); err != nil {
+		l.Errorf("failed to start client: %v", err)
+		os.Exit(1)
+	}
+	wg.Done()
+}
+
+func printHelp() {
+	fmt.Println("Usage:")
+	fmt.Println("  agent [flags]")
+	fmt.Println("  peer [flags]")
+	fmt.Println("  client [flags]")
+	fmt.Println("")
+	fmt.Println("Flags:")
+	flag.PrintDefaults()
+}
+
 func main() {
 	l := log.WithFields(log.Fields{
 		"pkg": "main",
 		"fn":  "main",
 	})
 	l.Info("starting")
-	flagAgentMode = flag.Bool("agent", false, "run as agent")
-	flagAgentChannel = flag.String("agent-channel", "default", "channel to listen on")
-	flagAgentPrivateKeyPath = flag.String("agent-key", "", "path to private key for agent")
-	flagPeerMode = flag.Bool("peer", false, "run as peer")
-	flagPeerBindPort = flag.Int("peer-bind-port", 0, "peer port to bind")
-	flagPeerAdvertisePort = flag.Int("peer-advertise-port", 0, "peer port to advertise")
-	flagPeerAdvertiseAddr = flag.String("peer-advertise-addr", "", "peer address to advertise")
-	flagPeerAddrs = flag.String("peer-addrs", "", "addresses to join")
-	flagPeerAllowedCidrs = flag.String("peer-cidrs", "", "cidrs to allow. comma separated. empty for all")
-	flagPeerConnectionMode = flag.String("peer-mode", "lan", "peer connection mode (lan, wan, local)")
-	flagServerMode = flag.Bool("server", false, "run as server")
-	flagUpstreamServerAddrs = flag.String("server-addrs", "", "addresses to join as an agent")
-	flagServerPort = flag.String("server-port", "8080", "port to use for server")
-	flagServerAuthToken = flag.String("server-token", "", "auth token for server")
-	flagPeerName = flag.String("peer-name", "", "name of this node")
-	flagDataDir = flag.String("data", "", "data directory")
-	flagHelp = flag.Bool("help", false, "show help")
-	flag.Parse()
-	if *flagHelp {
-		flag.PrintDefaults()
-		os.Exit(0)
+	var action string
+	// first arg is the action
+	if len(os.Args) > 1 {
+		l.Infof("action: %s", os.Args[1])
+		action = os.Args[1]
+	} else {
+		printHelp()
+		os.Exit(1)
 	}
-	if *flagAgentMode {
+
+	switch action {
+	case "agent":
+		flagAgent := flag.NewFlagSet("agent", flag.ExitOnError)
+		flagAgentChannel = flagAgent.String("channel", "default", "channel to listen on")
+		flagAgentPrivateKeyPath = flagAgent.String("key", "", "path to private key for agent")
+		flagServerAuthToken = flagAgent.String("server-token", "", "auth token for server")
+		flagUpstreamServerAddrs = flagAgent.String("server-addrs", "", "addresses to join as an agent")
+		flagDataDir = flagAgent.String("data", "", "data directory")
+		if err := flagAgent.Parse(os.Args[2:]); err != nil {
+			l.Errorf("failed to parse flags: %v", err)
+			os.Exit(1)
+		}
 		wg.Add(1)
 		go agnt()
-	}
-	if *flagPeerMode {
+	case "client":
+		flagClient := flag.NewFlagSet("client", flag.ExitOnError)
+		flagAgentChannel = flagClient.String("channel", "default", "channel to listen on")
+		flagClientPrivateKeyPath = flagClient.String("key", "", "path to private key for client")
+		flagClientMessageID = flagClient.String("id", "", "message id to retrieve")
+		flagClientMessageFileName = flagClient.String("file", "", "filename to set for outbound file message")
+		flagClientRecipientPublicKey = flagClient.String("to-key", "", "public key of recipient")
+		flagClientMessageType = flagClient.String("type", "message", "message type to set for outbound message (message, file)")
+		flagClientMessageInput = flagClient.String("in", "-", "input to set for outbound message")
+		flagClientOutput = flagClient.String("out", "-", "path to output file.")
+		flagClientOutputFormat = flagClient.String("format", "json", "output format (json, text)")
+		flagServerAuthToken = flagClient.String("server-token", "", "auth token for server")
+		flagUpstreamServerAddrs = flagClient.String("server-addrs", "", "addresses to join as an agent")
+		flagDataDir = flagClient.String("data", "", "data directory")
+		if err := flagClient.Parse(os.Args[3:]); err != nil {
+			l.Errorf("failed to parse flags: %v", err)
+			os.Exit(1)
+		}
+		wg.Add(1)
+		go clnt()
+	case "peer":
+		flagPeer := flag.NewFlagSet("peer", flag.ExitOnError)
+		flagPeerBindPort = flagPeer.Int("bind-port", 0, "peer port to bind")
+		flagPeerAdvertisePort = flagPeer.Int("advertise-port", 0, "peer port to advertise")
+		flagPeerAdvertiseAddr = flagPeer.String("advertise-addr", "", "peer address to advertise")
+		flagPeerAddrs = flagPeer.String("addrs", "", "addresses to join")
+		flagPeerAllowedCidrs = flagPeer.String("cidrs", "", "cidrs to allow. comma separated. empty for all")
+		flagPeerConnectionMode = flagPeer.String("mode", "lan", "peer connection mode (lan, wan, local)")
+		flagServerAuthToken = flagPeer.String("server-token", "", "auth token for server")
+		flagServerPort = flagPeer.String("server-port", "8080", "port to use for server")
+		flagPeerName = flagPeer.String("name", "", "name of this node")
+		flagDataDir = flagPeer.String("data", "", "data directory")
+		if err := flagPeer.Parse(os.Args[2:]); err != nil {
+			l.Errorf("failed to parse flags: %v", err)
+			os.Exit(1)
+		}
 		wg.Add(1)
 		go peer()
-	}
-	if *flagServerMode {
-		wg.Add(1)
 		go serv()
+	default:
+		l.Error("unknown action")
+		os.Exit(1)
 	}
 	wg.Wait()
 }

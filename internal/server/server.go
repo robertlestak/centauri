@@ -223,7 +223,7 @@ func ValidateSignedRequest(r *http.Request) (string, error) {
 		l.Errorf("error verifying signature: %v", err)
 		return pubKeyID, err
 	}
-	pubKeyID = sign.PubKeyID(sr.PublicKey)
+	pubKeyID = keys.PubKeyID(sr.PublicKey)
 	return pubKeyID, nil
 }
 
