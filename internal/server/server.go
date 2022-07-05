@@ -130,70 +130,6 @@ func HandleDeleteMessageByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HandleSignDataRequest(w http.ResponseWriter, r *http.Request) {
-	l := log.WithFields(log.Fields{
-		"pkg": "server",
-		"fn":  "HandleSignDataRequest",
-	})
-	l.Debug("signing data")
-	type SignDataRequest struct {
-		Data       []byte `json:"data"`
-		PrivateKey []byte `json:"private_key"`
-	}
-	mr := SignDataRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&mr); err != nil {
-		l.Errorf("error decoding message: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	pk, err := keys.BytesToPrivKey(mr.PrivateKey)
-	if err != nil {
-		l.Errorf("error converting private key: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	sd, err := sign.Sign(mr.Data, pk)
-	if err != nil {
-		l.Errorf("error signing data: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err := json.NewEncoder(w).Encode(sd); err != nil {
-		l.Errorf("error encoding message: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func HandleValidateDataSignature(w http.ResponseWriter, r *http.Request) {
-	l := log.WithFields(log.Fields{
-		"pkg": "server",
-		"fn":  "HandleValidateDataSignature",
-	})
-	l.Debug("validating data signature")
-	type ValidateDataSignatureRequest struct {
-		Data      []byte `json:"data"`
-		Signature []byte `json:"signature"`
-		PublicKey []byte `json:"public_key"`
-	}
-	mr := ValidateDataSignatureRequest{}
-	if err := json.NewDecoder(r.Body).Decode(&mr); err != nil {
-		l.Errorf("error decoding message: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err := sign.Verify(mr.Data, mr.Signature, mr.PublicKey); err != nil {
-		l.Errorf("error validating data signature: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if err := json.NewEncoder(w).Encode(true); err != nil {
-		l.Errorf("error encoding message: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
 func ValidateSignedRequest(r *http.Request) (string, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "server",
@@ -250,10 +186,6 @@ func Server(port string, authToken string) error {
 	r.HandleFunc("/message/{keyID}/meta", HandleListMesageMetaForPublicKey).Methods("LIST")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
-
-	// just for testing, this should be removed
-	r.HandleFunc("/sign", HandleSignDataRequest).Methods("POST")
-	r.HandleFunc("/sign/validate", HandleValidateDataSignature).Methods("POST")
 
 	// start server
 	return http.ListenAndServe(":"+port, r)
