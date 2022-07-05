@@ -68,7 +68,7 @@ func AddKeyToPublicChain(k []byte) {
 		"pkg": "keys",
 		"fn":  "AddKeyToPublicChain",
 	})
-	l.Info("Adding key to public chain")
+	l.Debug("Adding key to public chain")
 	keyID := PubKeyID(k)
 	if PublicKeyChain == nil {
 		PublicKeyChain = make(map[string][]byte)
@@ -82,7 +82,7 @@ func LoadPubKeyChainFromDirectory(d string) error {
 		"fn":  "LoadPubKeyChainFromDirectory",
 		"dir": d,
 	})
-	l.Info("Loading public key chain")
+	l.Debug("Loading public key chain")
 	// check if dir exists
 	if _, err := os.Stat(d); os.IsNotExist(err) {
 		l.Error("Directory does not exist")
@@ -114,7 +114,7 @@ func LoadPubKeyChainFromDirectory(d string) error {
 		return err
 	}
 	PublicKeyChain = newPubKeyChain
-	l.Infof("Public key chain loaded, %d keys loaded", len(PublicKeyChain))
+	l.Debugf("Public key chain loaded, %d keys loaded", len(PublicKeyChain))
 	return nil
 }
 
@@ -123,7 +123,7 @@ func ensureDirs(oldKeys map[string][]byte, newKeys map[string][]byte) error {
 		"pkg": "keys",
 		"fn":  "ensureDirs",
 	})
-	l.Info("Ensuring directories")
+	l.Debug("Ensuring directories")
 	var removed []string
 	for keyID := range oldKeys {
 		if _, ok := newKeys[keyID]; !ok {
@@ -152,7 +152,7 @@ func PubKeyLoader(d string) {
 		"fn":  "PubKeyLoader",
 		"dir": d,
 	})
-	l.Info("Loading public key chain")
+	l.Debug("Loading public key chain")
 	for {
 		err := LoadPubKeyChainFromDirectory(d)
 		if err != nil {
@@ -167,7 +167,7 @@ func RsaEncrypt(publicKey []byte, origData []byte) ([]byte, error) {
 		"pkg": "keys",
 		"fn":  "RsaEncrypt",
 	})
-	l.Info("encrypting data")
+	l.Debug("encrypting data")
 	l.Debugf("public key: %s", publicKey)
 	pub, err := BytesToPubKey(publicKey)
 	if err != nil {
@@ -182,7 +182,7 @@ func RsaDecrypt(privateKey []byte, ciphertext []byte) ([]byte, error) {
 		"pkg": "keys",
 		"fn":  "RsaDecrypt",
 	})
-	l.Info("decrypting data")
+	l.Debug("decrypting data")
 	block, _ := pem.Decode(privateKey)
 	if block == nil {
 		l.Error("error decoding private key")
@@ -223,9 +223,6 @@ func AesGcmEncrypt(key []byte, raw []byte) ([]byte, []byte, error) {
 	}
 
 	ciphertext := aesgcm.Seal(nil, nonce, raw, nil)
-	fmt.Printf("Ciphertext: %x\n", ciphertext)
-	fmt.Printf("Nonce: %x\n", nonce)
-
 	return ciphertext, nonce, nil
 }
 
@@ -254,7 +251,7 @@ func EncryptMessage(key, data []byte) (*string, error) {
 		"pkg": "keys",
 		"fn":  "EncryptMessage",
 	})
-	l.Info("Encrypting message")
+	l.Debug("Encrypting message")
 	// create a new key
 	aesKey, err := GenerateNewAESKey()
 	if err != nil {
@@ -295,7 +292,7 @@ func DecryptMessage(key []byte, data string) ([]byte, error) {
 		"pkg": "keys",
 		"fn":  "DecryptMessage",
 	})
-	l.Info("Decrypting message")
+	l.Debug("Decrypting message")
 	l.Debugf("data: %s", data)
 	// split the data into the header and the ciphertext
 	sep := "."

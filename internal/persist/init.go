@@ -11,7 +11,7 @@ func EnsureNodeDataDir(name string) error {
 		"pkg": "persist",
 		"fn":  "EnsureNodeDataDir",
 	})
-	l.Info("ensuring node data dir")
+	l.Debug("ensuring node data dir")
 	NodeDataDir = RootDataDir + "/" + name
 	return EnsureDir(NodeDataDir)
 }
@@ -21,7 +21,7 @@ func EnsureAgentMessagesDir() error {
 		"pkg": "persist",
 		"fn":  "EnsureAgentMessagesDir",
 	})
-	l.Info("ensuring agent messages dir")
+	l.Debug("ensuring agent messages dir")
 	AgentMessagesDir = RootDataDir + "/" + "received/messages"
 	return EnsureDir(AgentMessagesDir)
 }
@@ -31,7 +31,7 @@ func EnsureAgentFilesDir() error {
 		"pkg": "persist",
 		"fn":  "EnsureAgentFilesDir",
 	})
-	l.Info("ensuring agent files dir")
+	l.Debug("ensuring agent files dir")
 	AgentFilesDir = RootDataDir + "/" + "received/files"
 	return EnsureDir(AgentFilesDir)
 }
@@ -41,7 +41,7 @@ func EnsureAgentOutgoingDir() error {
 		"pkg": "persist",
 		"fn":  "EnsureAgentOutgoingDir",
 	})
-	l.Info("ensuring agent messages dir")
+	l.Debug("ensuring agent messages dir")
 	AgentOutgoingDir = RootDataDir + "/" + "outgoing"
 	if err := EnsureDir(AgentOutgoingDir); err != nil {
 		l.Errorf("failed to create agent outgoing dir: %v", err)
@@ -65,7 +65,7 @@ func EnsureMessagesDir() error {
 		"pkg": "persist",
 		"fn":  "EnsureMessagesDir",
 	})
-	l.Info("ensuring messages dir")
+	l.Debug("ensuring messages dir")
 	MessagesDir = NodeDataDir + "/messages"
 	return EnsureDir(MessagesDir)
 }
@@ -75,7 +75,7 @@ func EnsurePubKeyDir(pubKeyID string) (string, error) {
 		"pkg": "persist",
 		"fn":  "EnsurePubKeyDir",
 	})
-	l.Info("ensuring pub key dir")
+	l.Debug("ensuring pub key dir")
 	dir := PubKeyMessageDir(pubKeyID)
 	return dir, EnsureDir(dir)
 }
@@ -86,7 +86,7 @@ func EnsureDir(dir string) error {
 		"fn":  "EnsureDir",
 		"dir": dir,
 	})
-	l.Info("ensuring dir")
+	l.Debug("ensuring dir")
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
 			if err := os.MkdirAll(dir, 0755); err != nil {
@@ -103,7 +103,7 @@ func EnsureAgentPubKeyChainDir() error {
 		"pkg": "persist",
 		"fn":  "EnsureAgentPubKeyChainDir",
 	})
-	l.Info("ensuring pub key dir")
+	l.Debug("ensuring pub key dir")
 	dir := RootDataDir + "/pubkeys"
 	AgentPubKeyChainDir = dir
 	return EnsureDir(AgentPubKeyChainDir)
@@ -114,7 +114,7 @@ func EnsurePubKeyChainDir(pubKeyID string) (string, error) {
 		"pkg": "persist",
 		"fn":  "EnsurePubKeyChainDir",
 	})
-	l.Info("ensuring pub key dir")
+	l.Debug("ensuring pub key dir")
 	dir := PubKeyChainDir(pubKeyID)
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
@@ -132,19 +132,19 @@ func EnsurePubKeyChainOutgoingDir(pubKeyID string) (string, error) {
 		"pkg": "persist",
 		"fn":  "EnsurePubKeyChainOutgoingDir",
 	})
-	l.Info("ensuring pub key dir")
+	l.Debug("ensuring pub key dir")
 	dir := AgentOutgoingFilesDir + "/" + pubKeyID
 	if err := EnsureDir(dir); err != nil {
 		l.Errorf("failed to create pub key dir: %v", err)
 		return dir, err
 	}
-	l.Infof("outgoing files dir: %s", dir)
+	l.Debugf("outgoing files dir: %s", dir)
 	dir = AgentOutgoingMessagesDir + "/" + pubKeyID
 	if err := EnsureDir(dir); err != nil {
 		l.Errorf("failed to create pub key dir: %v", err)
 		return dir, err
 	}
-	l.Infof("outgoing messages dir: %s", dir)
+	l.Debugf("outgoing messages dir: %s", dir)
 	return dir, nil
 }
 
@@ -153,7 +153,7 @@ func RemovePubKeyChainOutgoingDir(pubKeyID string) (string, error) {
 		"pkg": "persist",
 		"fn":  "RemovePubKeyChainOutgoingDir",
 	})
-	l.Info("removing pub key dir")
+	l.Debug("removing pub key dir")
 	dir := AgentOutgoingFilesDir + "/" + pubKeyID
 	// delete the directory and all of its contents
 	if err := os.RemoveAll(dir); err != nil {
@@ -174,7 +174,7 @@ func Init(rootDataDir, nodeName string) error {
 		"pkg": "persist",
 		"fn":  "init",
 	})
-	l.Info("initializing")
+	l.Debug("initializing")
 	RootDataDir = rootDataDir
 	if err := EnsureNodeDataDir(nodeName); err != nil {
 		l.Errorf("failed to ensure node data dir: %v", err)
@@ -192,7 +192,7 @@ func InitAgent(rootDataDir string) error {
 		"pkg": "persist",
 		"fn":  "InitAgent",
 	})
-	l.Info("initializing")
+	l.Debug("initializing")
 	RootDataDir = rootDataDir
 	if err := EnsureAgentMessagesDir(); err != nil {
 		l.Errorf("failed to ensure node data dir: %v", err)

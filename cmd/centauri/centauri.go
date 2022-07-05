@@ -62,7 +62,7 @@ func peer() {
 		"pkg": "main",
 		"fn":  "peer",
 	})
-	l.Info("starting")
+	l.Debug("starting")
 	if err := persist.Init(*flagDataDir, *flagPeerName); err != nil {
 		l.Errorf("failed to init persist: %v", err)
 		os.Exit(1)
@@ -127,7 +127,7 @@ func serv() {
 		"pkg": "main",
 		"fn":  "serv",
 	})
-	l.Info("starting")
+	l.Debug("starting")
 	if err := server.Server(*flagServerPort, *flagServerAuthToken); err != nil {
 		l.Errorf("failed to start server: %v", err)
 		os.Exit(1)
@@ -139,7 +139,7 @@ func agnt() {
 		"pkg": "main",
 		"fn":  "agnt",
 	})
-	l.Info("starting")
+	l.Debug("starting")
 	if err := persist.InitAgent(*flagDataDir); err != nil {
 		l.Errorf("failed to init persist: %v", err)
 		os.Exit(1)
@@ -177,7 +177,7 @@ func clnt() {
 		"pkg": "main",
 		"fn":  "clnt",
 	})
-	l.Info("starting")
+	l.Debug("starting")
 	if flagUpstreamServerAddrs == nil {
 		l.Error("no upstream server addrs specified")
 		os.Exit(1)
@@ -246,11 +246,11 @@ func main() {
 		"pkg": "main",
 		"fn":  "main",
 	})
-	l.Info("starting")
+	l.Debug("starting")
 	var action string
 	// first arg is the action
 	if len(os.Args) > 1 {
-		l.Infof("action: %s", os.Args[1])
+		l.Debugf("action: %s", os.Args[1])
 		action = os.Args[1]
 	} else {
 		printHelp()
@@ -281,7 +281,7 @@ func main() {
 		flagClientMessageType = flagClient.String("type", "message", "message type to set for outbound message (message, file)")
 		flagClientMessageInput = flagClient.String("in", "-", "input to set for outbound message")
 		flagClientOutput = flagClient.String("out", "-", "path to output file.")
-		flagClientOutputFormat = flagClient.String("format", "json", "output format (json, text)")
+		flagClientOutputFormat = flagClient.String("format", "text", "output format (json, text)")
 		flagServerAuthToken = flagClient.String("server-token", "", "auth token for server")
 		flagUpstreamServerAddrs = flagClient.String("server-addrs", "", "addresses to join as an agent")
 		flagDataDir = flagClient.String("data", "", "data directory")

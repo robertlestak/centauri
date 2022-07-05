@@ -19,7 +19,7 @@ func GetOutgoingMessages() ([]string, error) {
 		"pkg": "agent",
 		"fn":  "GetOutgoingMessages",
 	})
-	l.Info("getting outgoing messages")
+	l.Debug("getting outgoing messages")
 	// get all files in dataDir + outgoing/messages
 	// return the file paths as a slice
 	files, err := filepath.Glob(filepath.Join(persist.RootDataDir, "outgoing", "messages", "*/*"))
@@ -35,7 +35,7 @@ func GetOutgoingFiles() ([]string, error) {
 		"pkg": "agent",
 		"fn":  "GetOutgoingFies",
 	})
-	l.Info("getting outgoing files")
+	l.Debug("getting outgoing files")
 	// get all files in dataDir + outgoing/files
 	// return the file paths as a slice
 	files, err := filepath.Glob(filepath.Join(persist.RootDataDir, "outgoing", "files", "*/*"))
@@ -51,14 +51,14 @@ func StartWatcher() error {
 		"pkg": "agent",
 		"fn":  "StartWatcher",
 	})
-	l.Info("starting watcher")
+	l.Debug("starting watcher")
 	outMsg, err := GetOutgoingMessages()
 	if err != nil {
 		l.Errorf("error getting outgoing messages: %v", err)
 		return err
 	}
 	if len(outMsg) == 0 {
-		l.Info("no outgoing messages")
+		l.Debug("no outgoing messages")
 	}
 	outFile, err := GetOutgoingFiles()
 	if err != nil {
@@ -66,7 +66,7 @@ func StartWatcher() error {
 		return err
 	}
 	if len(outFile) == 0 {
-		l.Info("no outgoing files")
+		l.Debug("no outgoing files")
 	}
 	if err := handleOutgoingMessages(outMsg); err != nil {
 		l.Errorf("error handling outgoing messages: %v", err)
@@ -87,7 +87,7 @@ func handleOutgoingFile(fp string, channel, pubKeyID, id string) error {
 		"key": pubKeyID,
 		"id":  id,
 	})
-	l.Info("handling outgoing file")
+	l.Debug("handling outgoing file")
 	f, err := os.Open(fp)
 	if err != nil {
 		l.Errorf("error opening file: %v", err)
@@ -115,11 +115,11 @@ func handleOutgoingFiles(files []string) error {
 		"pkg": "agent",
 		"fn":  "handleOutgoingFiles",
 	})
-	l.Info("handling outgoing files")
+	l.Debug("handling outgoing files")
 	for _, file := range files {
 		dir, fn := filepath.Split(file)
 		key := filepath.Base(dir)
-		l.Infof("handling file %s for key %s", fn, key)
+		l.Debugf("handling file %s for key %s", fn, key)
 		if err := handleOutgoingFile(file, DefaultChannel, key, fn); err != nil {
 			l.Errorf("error handling outgoing file: %v", err)
 			return err
@@ -136,7 +136,7 @@ func handleOutgoingMessage(fp, pubKeyID, id string) error {
 		"key": pubKeyID,
 		"id":  id,
 	})
-	l.Info("handling outgoing message")
+	l.Debug("handling outgoing message")
 	f, err := os.Open(fp)
 	if err != nil {
 		l.Errorf("error opening file: %v", err)
@@ -164,11 +164,11 @@ func handleOutgoingMessages(msgs []string) error {
 		"pkg": "agent",
 		"fn":  "handleOutgoingMessages",
 	})
-	l.Info("handling outgoing messages")
+	l.Debug("handling outgoing messages")
 	for _, msg := range msgs {
 		dir, fn := filepath.Split(msg)
 		key := filepath.Base(dir)
-		l.Infof("handling message %s for key %s", fn, key)
+		l.Debugf("handling message %s for key %s", fn, key)
 		if err := handleOutgoingMessage(msg, key, fn); err != nil {
 			l.Errorf("error handling outgoing message: %v", err)
 			return err
@@ -182,7 +182,7 @@ func EnsureWatcher() error {
 		"pkg": "agent",
 		"fn":  "EnsureWatcher",
 	})
-	l.Info("ensuring outgoing watcher")
+	l.Debug("ensuring outgoing watcher")
 	for {
 		err := StartWatcher()
 		if err != nil {
@@ -198,7 +198,7 @@ func SendMessageThroughPeer(msg *message.Message) error {
 		"fn":            "SendMessageThroughPeer",
 		"m.PublicKeyID": msg.PublicKeyID,
 	})
-	l.Info("sending message through peer")
+	l.Debug("sending message through peer")
 	saddr := GetAgentServer()
 	c := &http.Client{}
 	jd, err := json.Marshal(msg)
@@ -226,7 +226,7 @@ func SendMessageThroughPeer(msg *message.Message) error {
 		l.Errorf("error decoding response: %v", err)
 		return err
 	}
-	l.Infof("message sent: %v", msg.ID)
+	l.Debugf("message sent: %v", msg.ID)
 	return nil
 }
 
@@ -237,7 +237,7 @@ func sendMessage(channel, pubKeyID, mType, fn string, data io.ReadCloser) error 
 		"key": pubKeyID,
 		"id":  fn,
 	})
-	l.Info("sending message")
+	l.Debug("sending message")
 	m, err := message.CreateMessage(mType, fn, channel, pubKeyID, data)
 	if err != nil {
 		l.Errorf("error creating message: %v", err)

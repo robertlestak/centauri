@@ -43,7 +43,7 @@ func StoreMessage(pubKeyID string, channel string, id string, data []byte) error
 		"pkg": "persist",
 		"fn":  "StoreMessage",
 	})
-	l.Info("storing message")
+	l.Debug("storing message")
 	dir := PubKeyMessageDir(pubKeyID)
 	if channel == "" {
 		channel = "default"
@@ -68,7 +68,7 @@ func ListMessageMetaForPubKeyID(pubKeyID string, channel string) ([]MessageMetaD
 		"pubKeyID": pubKeyID,
 		"channel":  channel,
 	})
-	l.Info("listing messages for pub key id")
+	l.Debug("listing messages for pub key id")
 	var md []MessageMetaData
 	dir := PubKeyMessageDir(pubKeyID)
 	// check if dir exists
@@ -118,7 +118,7 @@ func GetMessageByID(pubKeyID string, channel string, id string) ([]byte, error) 
 		"pkg": "persist",
 		"fn":  "GetMessageByID",
 	})
-	l.Info("getting message by id")
+	l.Debug("getting message by id")
 	dir := PubKeyMessageDir(pubKeyID)
 	if _, err := os.Stat(dir); err != nil {
 		if os.IsNotExist(err) {
@@ -151,7 +151,7 @@ func StoreAgentMessage(channel string, name string, mtype string, data []byte) e
 		"pkg": "persist",
 		"fn":  "StoreAgentMessage",
 	})
-	l.Info("storing agent file")
+	l.Debug("storing agent file")
 	var dir string
 	switch mtype {
 	case "message":
@@ -185,7 +185,7 @@ func DeleteMessageByID(pubKeyID string, channel string, id string) error {
 		"pkg": "persist",
 		"fn":  "DeleteMessageByID",
 	})
-	l.Info("deleting message by id")
+	l.Debug("deleting message by id")
 	mdir := PubKeyMessageDir(pubKeyID)
 	if _, err := os.Stat(mdir); err != nil {
 		if os.IsNotExist(err) {
@@ -218,7 +218,7 @@ func DeleteDirIfEmpty(dir string) error {
 		"fn":  "DeleteDirIfEmpty",
 		"dir": dir,
 	})
-	l.Info("deleting dir if empty")
+	l.Debug("deleting dir if empty")
 	// loop through dir and if there are empty dirs, delete them
 	// if this dir is empty, delete it
 	files, err := filepath.Glob(dir + "/*")
@@ -252,7 +252,7 @@ func cleanupOldFiles(dur time.Duration) error {
 		"pkg": "persist",
 		"fn":  "cleanupOldFiles",
 	})
-	l.Info("cleaning up old files")
+	l.Debug("cleaning up old files")
 	// loop through MessagesDir recursivevely
 	// the directory name is the pubKeyID and the file name is the messageID
 	// if the file is older than dur, delete it
@@ -309,10 +309,10 @@ func TimeoutCleaner() {
 		"pkg": "persist",
 		"fn":  "TimeoutCleaner",
 	})
-	l.Info("timeout cleaner started")
+	l.Debug("timeout cleaner started")
 	for {
 		time.Sleep(time.Hour * 24)
-		l.Info("cleaning")
+		l.Debug("cleaning")
 		if err := cleanupOldFiles(time.Hour * 24 * 90); err != nil {
 			l.Errorf("failed to clean: %v", err)
 		}

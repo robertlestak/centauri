@@ -51,7 +51,7 @@ func (m *Message) Create() (*Message, error) {
 		"pkg": "message",
 		"fn":  "Create",
 	})
-	l.Info("creating message")
+	l.Debug("creating message")
 	if m.PublicKeyID == "" {
 		l.Error("public key id is empty")
 		return nil, errors.New("public key id is required")
@@ -88,7 +88,7 @@ func (m *Message) StoreLocal() error {
 		"pkg": "message",
 		"fn":  "StoreLocal",
 	})
-	l.Info("storing message locally")
+	l.Debug("storing message locally")
 	if err := persist.StoreMessage(m.PublicKeyID, m.Channel, m.ID, m.Data); err != nil {
 		l.Errorf("error storing message: %v", err)
 		return err
@@ -103,7 +103,7 @@ func ListMessageMetaForPubKeyID(pubKeyID string, channel string) ([]persist.Mess
 		"id":  pubKeyID,
 		"ch":  channel,
 	})
-	l.Info("listing messages for public key")
+	l.Debug("listing messages for public key")
 	return persist.ListMessageMetaForPubKeyID(pubKeyID, channel)
 }
 
@@ -112,7 +112,7 @@ func GetMessageByID(pubKeyID string, channel string, id string) (*Message, error
 		"pkg": "message",
 		"fn":  "GetMessageByID",
 	})
-	l.Info("getting message by id")
+	l.Debug("getting message by id")
 	data, err := persist.GetMessageByID(pubKeyID, channel, id)
 	if err != nil {
 		l.Errorf("error getting message: %v", err)
@@ -132,7 +132,7 @@ func GetMessageFromPeer(pubKeyID string, channel string, id string, data []byte)
 		"pkg": "message",
 		"fn":  "GetMessageFromPeer",
 	})
-	l.Info("getting message from peer")
+	l.Debug("getting message from peer")
 	msg := &Message{
 		Type:        "message",
 		ID:          id,
@@ -152,7 +152,7 @@ func DeleteMessageByID(pubKeyID string, channel string, id string, eventTrigger 
 		"pkg": "message",
 		"fn":  "DeleteMessageByID",
 	})
-	l.Info("deleting message by id")
+	l.Debug("deleting message by id")
 	if err := persist.DeleteMessageByID(pubKeyID, channel, id); err != nil {
 		l.Errorf("error deleting message: %v", err)
 		return err
@@ -175,7 +175,7 @@ func CreateMessage(mType string, fileName string, channel string, pubKeyID strin
 		"channel": channel,
 		"pubkey":  pubKeyID,
 	})
-	l.Info("creating message")
+	l.Debug("creating message")
 	var pubKey []byte
 	// get public key for pubKeyID
 	if k, ok := keys.PublicKeyChain[pubKeyID]; !ok {

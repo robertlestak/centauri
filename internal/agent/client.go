@@ -17,7 +17,7 @@ func sendOutput(data []byte, out string) error {
 		"pkg": "agent",
 		"fn":  "sendOutput",
 	})
-	l.Info("sending output")
+	l.Debug("sending output")
 	// if out is "-" or empty, then write to stdout
 	// otherwise, write to file
 	if out == "-" || out == "" {
@@ -49,17 +49,17 @@ func listMessages(channel string, format string, out string) error {
 		"pkg": "agent",
 		"fn":  "listMessages",
 	})
-	l.Info("listing messages")
+	l.Debug("listing messages")
 	msgs, err := CheckPendingMessages(channel)
 	if err != nil {
 		l.Errorf("error checking pending messages: %v", err)
 		return err
 	}
 	if len(msgs) == 0 {
-		l.Info("no pending messages")
+		l.Debug("no pending messages")
 		return nil
 	}
-	l.Infof("pending messages: %v", msgs)
+	l.Debugf("pending messages: %v", msgs)
 	var data []byte
 	if format == "" {
 		format = "json"
@@ -85,13 +85,13 @@ func getMessage(channel string, id string, out string) error {
 		"pkg": "agent",
 		"fn":  "getMessage",
 	})
-	l.Info("getting message")
+	l.Debug("getting message")
 	msg, fn, err := getMessageData(channel, id)
 	if err != nil {
 		l.Errorf("error getting message: %v", err)
 		return err
 	}
-	l.Infof("message: %v", msg)
+	l.Debugf("message: %v", msg)
 	// if out is "-" or empty, then write to stdout
 	if out == "-" || out == "" {
 		_, err := os.Stdout.Write(msg.Data)
@@ -128,7 +128,7 @@ func sendMessageFromInput() error {
 		"pkg": "agent",
 		"fn":  "sendMessageFromInput",
 	})
-	l.Info("sending message from input")
+	l.Debug("sending message from input")
 	var recipID string
 	for id := range keys.PublicKeyChain {
 		recipID = id
@@ -136,10 +136,10 @@ func sendMessageFromInput() error {
 	}
 	var in io.ReadCloser
 	if ClientMessageInput == "-" || ClientMessageInput == "" {
-		l.Info("reading from stdin")
+		l.Debug("reading from stdin")
 		in = os.Stdin
 	} else {
-		l.Infof("reading from file: %v", ClientMessageInput)
+		l.Debugf("reading from file: %v", ClientMessageInput)
 		var err error
 		in, err = os.Open(ClientMessageInput)
 		if err != nil {

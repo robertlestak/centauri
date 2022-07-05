@@ -150,7 +150,7 @@ func Create(nodeName string, addr string, advPort int, bindPort int, connMode st
 		l.Errorf("failed to create memberlist: %v", err)
 		return err
 	}
-	l.Info("created memberlist")
+	l.Debug("created memberlist")
 	List = list
 	return nil
 }
@@ -166,7 +166,7 @@ func Join(addrs []string) error {
 		l.Errorf("failed to join memberlist: %v", err)
 		return err
 	}
-	l.Info("joined memberlist")
+	l.Debug("joined memberlist")
 	return nil
 }
 

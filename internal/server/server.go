@@ -18,7 +18,7 @@ func HandleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		"pkg": "server",
 		"fn":  "HandleCreateMessage",
 	})
-	l.Info("creating message")
+	l.Debug("creating message")
 	mr := message.Message{}
 	if err := json.NewDecoder(r.Body).Decode(&mr); err != nil {
 		l.Errorf("error decoding message: %v", err)
@@ -43,7 +43,7 @@ func HandleListMesageMetaForPublicKey(w http.ResponseWriter, r *http.Request) {
 		"pkg": "server",
 		"fn":  "HandleListMessageMetaForPublicKey",
 	})
-	l.Info("listing message meta for public key")
+	l.Debug("listing message meta for public key")
 	vars := mux.Vars(r)
 	keyID := vars["keyID"]
 	channel := r.URL.Query().Get("channel")
@@ -58,7 +58,7 @@ func HandleListMesageMetaForPublicKey(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "key id mismatch", http.StatusBadRequest)
 		return
 	}
-	l.Infof("listing message meta for public key: %v", keyID)
+	l.Debugf("listing message meta for public key: %v", keyID)
 	messages, err := message.ListMessageMetaForPubKeyID(keyID, channel)
 	if err != nil {
 		l.Errorf("error listing message meta for public key: %v", err)
@@ -77,7 +77,7 @@ func HandleGetMessageByID(w http.ResponseWriter, r *http.Request) {
 		"pkg": "server",
 		"fn":  "HandleGetMessageByID",
 	})
-	l.Info("getting message by id")
+	l.Debug("getting message by id")
 	vars := mux.Vars(r)
 	id := vars["id"]
 	channel := vars["channel"]
@@ -107,7 +107,7 @@ func HandleDeleteMessageByID(w http.ResponseWriter, r *http.Request) {
 		"pkg": "server",
 		"fn":  "HandleDeleteMessageByID",
 	})
-	l.Info("deleting message by id")
+	l.Debug("deleting message by id")
 	vars := mux.Vars(r)
 	id := vars["id"]
 	keyID := vars["keyID"]
@@ -135,7 +135,7 @@ func HandleSignDataRequest(w http.ResponseWriter, r *http.Request) {
 		"pkg": "server",
 		"fn":  "HandleSignDataRequest",
 	})
-	l.Info("signing data")
+	l.Debug("signing data")
 	type SignDataRequest struct {
 		Data       []byte `json:"data"`
 		PrivateKey []byte `json:"private_key"`
@@ -170,7 +170,7 @@ func HandleValidateDataSignature(w http.ResponseWriter, r *http.Request) {
 		"pkg": "server",
 		"fn":  "HandleValidateDataSignature",
 	})
-	l.Info("validating data signature")
+	l.Debug("validating data signature")
 	type ValidateDataSignatureRequest struct {
 		Data      []byte `json:"data"`
 		Signature []byte `json:"signature"`
@@ -200,7 +200,7 @@ func ValidateSignedRequest(r *http.Request) (string, error) {
 		"fn":  "ValidateSignedRequest",
 	})
 	var pubKeyID string
-	l.Info("validating signed request")
+	l.Debug("validating signed request")
 	// signed request payload will be in header X-Signature
 	// header X-Signature is base64 encoded
 	sd := r.Header.Get("X-Signature")
@@ -232,7 +232,7 @@ func Server(port string, authToken string) error {
 		"pkg": "server",
 		"fn":  "Server",
 	})
-	l.Info("starting server")
+	l.Debug("starting server")
 	r := mux.NewRouter()
 	if authToken != "" {
 		r.Use(func(h http.Handler) http.Handler {

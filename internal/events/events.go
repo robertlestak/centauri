@@ -21,7 +21,7 @@ func DeleteMessage(pubKeyID, channel, id string) error {
 		"pkg": "events",
 		"fn":  "DeleteMessage",
 	})
-	l.Info("deleting message")
+	l.Debug("deleting message")
 	for _, f := range DeletionHandlers {
 		if err := f(pubKeyID, channel, id); err != nil {
 			l.Errorf("error deleting message: %v", err)
@@ -36,7 +36,7 @@ func NewMessage(pubKeyID, channel string, id string, data []byte) error {
 		"pkg": "events",
 		"fn":  "NewMessage",
 	})
-	l.Info("new message")
+	l.Debug("new message")
 	for _, f := range NewMessageHandlers {
 		if err := f(pubKeyID, channel, id, data); err != nil {
 			l.Errorf("error new message: %v", err)
@@ -51,7 +51,7 @@ func ReceiveMessage(data []byte) error {
 		"pkg": "events",
 		"fn":  "ReceiveMessage",
 	})
-	l.Info("receiving message")
+	l.Debug("receiving message")
 	var md map[string]any
 	if err := json.Unmarshal(data, &md); err != nil {
 		l.Errorf("error unmarshalling message: %v", err)
@@ -59,7 +59,7 @@ func ReceiveMessage(data []byte) error {
 	}
 	switch md["type"] {
 	case "newMessage":
-		l.Info("new message")
+		l.Debug("new message")
 		pubKeyID := md["pubKeyID"].(string)
 		id := md["id"].(string)
 		channel := md["channel"].(string)
@@ -76,7 +76,7 @@ func ReceiveMessage(data []byte) error {
 			}
 		}
 	case "deleteMessage":
-		l.Info("delete message")
+		l.Debug("delete message")
 		pubKeyID := md["pubKeyID"].(string)
 		channel := md["channel"].(string)
 		id := md["id"].(string)

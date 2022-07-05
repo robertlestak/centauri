@@ -51,7 +51,7 @@ func getMessageData(channel, id string) (*message.Message, string, error) {
 		"pkg": "agent",
 		"fn":  "getMessageData",
 	})
-	l.Infof("getting message %s", id)
+	l.Debugf("getting message %s", id)
 	m, err := GetMessage(channel, id)
 	if err != nil {
 		l.Errorf("error getting message %s: %v", id, err)
@@ -103,7 +103,7 @@ func getMessageWorker(jobs chan GetJob, res chan error) {
 		"fn":  "getMessageWorker",
 	})
 	for job := range jobs {
-		l.Infof("getting message %s", job.ID)
+		l.Debugf("getting message %s", job.ID)
 		m, fn, err := getMessageData(job.Channel, job.ID)
 		if err != nil {
 			l.Errorf("error getting message %s: %v", job.ID, err)
@@ -129,7 +129,7 @@ func Agent() error {
 		"pkg": "agent",
 		"fn":  "agent",
 	})
-	l.Info("agent")
+	l.Debug("agent")
 	go EnsureWatcher()
 	for {
 		if len(ServerAddrs) == 0 {
@@ -144,11 +144,11 @@ func Agent() error {
 			continue
 		}
 		if len(msgs) == 0 {
-			l.Info("no pending messages")
+			l.Debug("no pending messages")
 			time.Sleep(time.Second * 10)
 			continue
 		}
-		l.Infof("pending messages: %v", msgs)
+		l.Debugf("pending messages: %v", msgs)
 		jobs := make(chan GetJob, len(msgs))
 		res := make(chan error, len(msgs))
 		for i := 0; i < 10; i++ {
@@ -168,7 +168,7 @@ func Agent() error {
 				continue
 			}
 		}
-		l.Info("got all messages")
+		l.Debug("got all messages")
 		time.Sleep(time.Second * 10)
 	}
 }
@@ -178,7 +178,7 @@ func Client() error {
 		"pkg": "agent",
 		"fn":  "Client",
 	})
-	l.Info("client")
+	l.Debug("client")
 	if len(ServerAddrs) == 0 {
 		l.Error("no server addresses")
 		return fmt.Errorf("no server addresses")
@@ -189,7 +189,7 @@ func Client() error {
 	if len(os.Args) > 2 {
 		action = os.Args[2]
 	}
-	l.Infof("action: %s", action)
+	l.Debugf("action: %s", action)
 	switch action {
 	case "confirm":
 		return ConfirmMessageReceive(DefaultChannel, ClientMessageID)
@@ -209,7 +209,7 @@ func LoadPrivateKey(key []byte) error {
 		"pkg": "agent",
 		"fn":  "LoadPrivateKey",
 	})
-	l.Info("loading private key")
+	l.Debug("loading private key")
 	k, err := keys.BytesToPrivKey(key)
 	if err != nil {
 		l.Errorf("error loading private key: %v", err)
@@ -224,7 +224,7 @@ func LoadPrivateKeyFromFile(file string) error {
 		"pkg": "agent",
 		"fn":  "LoadPrivateKeyFromFile",
 	})
-	l.Info("loading private key from file")
+	l.Debug("loading private key from file")
 	fd, err := ioutil.ReadFile(file)
 	if err != nil {
 		l.Errorf("error loading private key from file: %v", err)
@@ -250,7 +250,7 @@ func CreateSignature() (string, string, error) {
 		"pkg": "agent",
 		"fn":  "CreateSignature",
 	})
-	l.Info("creating signature")
+	l.Debug("creating signature")
 	ts := time.Now().Unix()
 	var td struct {
 		Timestamp int64 `json:"timestamp"`
@@ -266,7 +266,7 @@ func CreateSignature() (string, string, error) {
 		l.Errorf("error marshalling timestamp: %v", err)
 		return "", "", err
 	}
-	l.Infof("timestamp: %s", string(jd))
+	l.Debugf("timestamp: %s", string(jd))
 	sig, err := sign.Sign(jd, PrivateKey)
 	if err != nil {
 		l.Errorf("error creating signature: %v", err)
@@ -292,7 +292,7 @@ func CreateSignature() (string, string, error) {
 		return "", "", err
 	}
 	keyID := keys.PubKeyID(publicKeyPem)
-	l.Infof("key ID: %s", keyID)
+	l.Debugf("key ID: %s", keyID)
 	return base64.StdEncoding.EncodeToString(j), keyID, nil
 }
 
@@ -302,7 +302,7 @@ func CheckPendingMessages(channel string) ([]MessageMeta, error) {
 		"fn":  "CheckPendingMessages",
 		"ch":  channel,
 	})
-	l.Info("checking pending messages")
+	l.Debug("checking pending messages")
 	var msgs []MessageMeta
 	saddr := GetAgentServer()
 	c := &http.Client{}
@@ -355,7 +355,7 @@ func GetMessage(channel, id string) (*message.Message, error) {
 		"id":  id,
 		"ch":  channel,
 	})
-	l.Info("getting message")
+	l.Debug("getting message")
 	saddr := GetAgentServer()
 	c := &http.Client{}
 	sig, keyID, err := CreateSignature()
@@ -402,7 +402,7 @@ func ConfirmMessageReceive(channel, id string) error {
 		"pkg": "agent",
 		"fn":  "ConfirmMessageReceive",
 	})
-	l.Info("confirming message receive")
+	l.Debug("confirming message receive")
 	saddr := GetAgentServer()
 	c := &http.Client{}
 	sig, keyID, err := CreateSignature()
@@ -442,7 +442,7 @@ func DecryptMessageData(m *message.Message) (*message.Message, error) {
 		"pkg": "agent",
 		"fn":  "DecryptMessageData",
 	})
-	l.Info("decrypting message data")
+	l.Debug("decrypting message data")
 	priv := x509.MarshalPKCS1PrivateKey(PrivateKey)
 	kb := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
@@ -455,6 +455,6 @@ func DecryptMessageData(m *message.Message) (*message.Message, error) {
 		return m, err
 	}
 	m.Data = decrypted
-	l.Infof("decrypted message data: %s", m.Data)
+	l.Debugf("decrypted message data: %s", m.Data)
 	return m, nil
 }
