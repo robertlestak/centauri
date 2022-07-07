@@ -157,7 +157,7 @@ func StoreAgentMessage(channel string, name string, mtype string, data []byte) e
 	l.Debug("storing agent file")
 	var dir string
 	switch mtype {
-	case "message":
+	case "bytes":
 		dir = AgentMessagesDir
 	case "file":
 		dir = AgentFilesDir

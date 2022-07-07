@@ -232,7 +232,7 @@ func handleOutgoingMessage(fp, pubKeyID, id string) error {
 		l.Errorf("error opening file: %v", err)
 		return err
 	}
-	m, err := message.CreateMessage("message", "", DefaultChannel, pubKeyID, f)
+	m, err := message.CreateMessage("bytes", "", DefaultChannel, pubKeyID, f)
 	if err != nil {
 		l.Errorf("error creating message: %v", err)
 		return err

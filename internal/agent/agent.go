@@ -75,7 +75,7 @@ func getMessageData(channel, id string) (*message.Message, string, error) {
 	// get first 4 bytes of data to check if it is a file
 	var firstFileByte int
 	var mtype string
-	mtype = "message"
+	mtype = "bytes"
 	if len(m.Data) > 4 {
 		ff := m.Data[:4]
 		if string(ff) == "file" {

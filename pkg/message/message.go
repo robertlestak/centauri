@@ -38,7 +38,7 @@ func validateType(t string) error {
 	switch t {
 	case "file":
 		l.Debug("type is valid")
-	case "message":
+	case "bytes":
 		l.Debug("type is valid")
 	default:
 		l.Errorf("type is invalid: %s", t)
@@ -148,7 +148,7 @@ func GetMessageFromPeer(pubKeyID string, channel string, id string, data []byte)
 	l.Debug("getting message from peer")
 	channel = CleanString(channel)
 	msg := &Message{
-		Type:        "message",
+		Type:        "bytes",
 		ID:          id,
 		Channel:     channel,
 		PublicKeyID: pubKeyID,
