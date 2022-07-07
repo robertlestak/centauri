@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strconv"
 	"time"
 
@@ -123,6 +124,33 @@ func getMessage(channel string, id string, out string) error {
 		}
 	}
 	return nil
+}
+
+func getNextMessage(channel string, out string) error {
+	l := log.WithFields(log.Fields{
+		"pkg": "agent",
+		"fn":  "getNextMessage",
+	})
+	l.Debug("getting next message")
+	// list messages, sort by created at, get first message
+	msgs, err := CheckPendingMessages(channel)
+	if err != nil {
+		l.Errorf("error checking pending messages: %v", err)
+		return err
+	}
+	if len(msgs) == 0 {
+		l.Debug("no pending messages")
+		return nil
+	}
+	l.Debugf("pending messages: %v", msgs)
+	// sort by created at
+	sort.Slice(msgs, func(i, j int) bool {
+		return msgs[i].CreatedAt.Before(msgs[j].CreatedAt)
+	})
+	// get first message
+	msg := msgs[0]
+	// get message data
+	return getMessage(channel, msg.ID, out)
 }
 
 func sendMessageFromInput() error {

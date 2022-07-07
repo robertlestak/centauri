@@ -176,7 +176,7 @@ func Server(port string, authToken string) error {
 	}
 
 	r.HandleFunc("/message", HandleCreateMessage).Methods("POST")
-	r.HandleFunc("/message/meta", HandleListMesageMetaForPublicKey).Methods("LIST")
+	r.HandleFunc("/messages", HandleListMesageMetaForPublicKey).Methods("LIST")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
 

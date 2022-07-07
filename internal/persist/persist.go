@@ -27,9 +27,9 @@ var (
 type MessageMetaData struct {
 	ID        string    `json:"id"`
 	Channel   string    `json:"channel"`
-	PubKeyID  string    `json:"pubkey_id"`
+	PubKeyID  string    `json:"pubKeyID"`
 	Size      int64     `json:"size"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func PubKeyMessageDir(pubKeyID string) string {

@@ -21,7 +21,7 @@ type Message struct {
 	Type        string `json:"type"`
 	Channel     string `json:"channel"`
 	ID          string `json:"id"`
-	PublicKeyID string `json:"public_key_id,omitempty"`
+	PublicKeyID string `json:"pubKeyID,omitempty"`
 	Data        []byte `json:"data"`
 }
 

@@ -40,7 +40,7 @@ type MessageMeta struct {
 	ID        string    `json:"id"`
 	Channel   string    `json:"channel"`
 	Size      int64     `json:"size"`
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 type GetJob struct {
@@ -201,6 +201,8 @@ func Client() error {
 		return ConfirmMessageReceive(DefaultChannel, ClientMessageID)
 	case "get":
 		return getMessage(DefaultChannel, ClientMessageID, Output)
+	case "get-next":
+		return getNextMessage(DefaultChannel, Output)
 	case "list":
 		return listMessages(DefaultChannel, OutputFormat, Output)
 	case "send":
@@ -208,6 +210,25 @@ func Client() error {
 	default:
 		return fmt.Errorf("unknown action: %s", action)
 	}
+}
+
+func ClientHelp() string {
+	return `
+Usage:
+  agent client [action]
+
+Actions:
+  confirm
+	confirm that message has been received
+  get
+	get message
+  get-next
+	get next message
+  list
+	list messages
+  send
+	send message
+`
 }
 
 func LoadPrivateKey(key []byte) error {
@@ -317,7 +338,7 @@ func CheckPendingMessages(channel string) ([]MessageMeta, error) {
 		l.Errorf("error creating signature: %v", err)
 		return msgs, err
 	}
-	addr := saddr + "/message/meta"
+	addr := saddr + "/messages"
 	if channel != "" {
 		addr = addr + "?channel=" + channel
 	}

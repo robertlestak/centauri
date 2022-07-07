@@ -285,6 +285,11 @@ func main() {
 		flagServerAuthToken = flagClient.String("server-token", "", "auth token for server")
 		flagUpstreamServerAddrs = flagClient.String("server-addrs", "", "addresses to join as an agent")
 		flagDataDir = flagClient.String("data", "", "data directory")
+		if len(os.Args) <= 2 {
+			fmt.Println(agent.ClientHelp())
+			flagClient.PrintDefaults()
+			os.Exit(1)
+		}
 		if err := flagClient.Parse(os.Args[3:]); err != nil {
 			l.Errorf("failed to parse flags: %v", err)
 			os.Exit(1)

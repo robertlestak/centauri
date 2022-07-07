@@ -37,7 +37,7 @@ go run cmd/centauri/*.go \
     -agent -agent-key ~/Desktop/private-key.pem \
     -server-addrs http://localhost:8080
 
-curl -X LIST "localhost:8081/message/meta" -H "X-Signature: $SIG"
+curl -X LIST "localhost:8081/messages" -H "X-Signature: $SIG"
 
 curl -X GET "localhost:8081/message/$PUBKEYID/83e7ab0a-2a92-4b8b-96d4-6d0f444efa72" -H "X-Signature: $SIG"
 
@@ -48,7 +48,7 @@ curl -X GET "localhost:8082/message/$PUBKEYID/0f1c4ae2-c5c0-458c-8550-4aff0411f3
 curl -X GET "localhost:8081/message/$PUBKEYID/0eca2fe7-200d-4e97-9c9e-9c24ecaa1254" -H "X-Signature: $SIG"
 curl -X DELETE "localhost:8080/message/$PUBKEYID/acb21598-b778-42a4-b1f7-ddeecbb6084d" -H "X-Signature: $SIG"
 
-curl 'localhost:8080/message' -d '{"type": "bytes", "public_key_id": "'$PUBKEYID'", "data": "'`echo hello | openssl rsautl -encrypt -oaep -pubin -inkey ~/Desktop/pub.pub | base64`'"}'
+curl 'localhost:8080/message' -d '{"type": "bytes", "pubKeyID": "'$PUBKEYID'", "data": "'`echo hello | openssl rsautl -encrypt -oaep -pubin -inkey ~/Desktop/pub.pub | base64`'"}'
 
 PUBKEYID=`cat ~/Desktop/pub.pub | shasum -a 256 | awk '{print $1}'`
 KEY=`aesgcm -g -l 32`
@@ -63,7 +63,7 @@ HEADER=`echo '{"k": "'$KEY'", "n": "'$NONCE'"}' | \
 
 ENCRYPTED_MESSAGE="${HEADER}.${CIPHERTEXT}"
 
-curl 'localhost:8080/message' -d '{"type": "bytes", "channel": "default", "public_key_id": "'$PUBKEYID'", "data": "'`echo $ENCRYPTED_MESSAGE | base64 -w0`'"}'
+curl 'localhost:8080/message' -d '{"type": "bytes", "channel": "default", "pubKeyID": "'$PUBKEYID'", "data": "'`echo $ENCRYPTED_MESSAGE | base64 -w0`'"}'
 
 
 # split ENCRYPTED_MESSAGE on "."
