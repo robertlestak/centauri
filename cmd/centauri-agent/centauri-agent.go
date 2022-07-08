@@ -9,6 +9,7 @@ import (
 	"github.com/robertlestak/centauri/internal/agent"
 	"github.com/robertlestak/centauri/internal/keys"
 	"github.com/robertlestak/centauri/internal/persist"
+	"github.com/robertlestak/centauri/pkg/cfg"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -29,37 +30,53 @@ func init() {
 	log.SetLevel(ll)
 }
 
+func loadcfg() {
+	cfg.Init()
+	if cfg.Config.Agent.Channel == "" {
+		cfg.Config.Agent.Channel = *flagAgentChannel
+	}
+	if cfg.Config.Agent.PrivateKeyPath == "" {
+		cfg.Config.Agent.PrivateKeyPath = *flagAgentPrivateKeyPath
+	}
+	if cfg.Config.Agent.ServerAuthToken == "" {
+		cfg.Config.Agent.ServerAuthToken = *flagServerAuthToken
+	}
+	if len(cfg.Config.Agent.ServerAddrs) == 0 {
+		ss := strings.Split(*flagUpstreamServerAddrs, ",")
+		var addrs []string
+		for _, addr := range ss {
+			if strings.TrimSpace(addr) == "" {
+				continue
+			}
+			addrs = append(addrs, addr)
+		}
+		cfg.Config.Agent.ServerAddrs = addrs
+	}
+	if cfg.Config.Agent.DataDir == "" {
+		cfg.Config.Agent.DataDir = *flagDataDir
+	}
+}
+
 func agnt() {
 	l := log.WithFields(log.Fields{
 		"pkg": "main",
 		"fn":  "agnt",
 	})
 	l.Debug("starting")
-	if err := persist.InitAgent(*flagDataDir); err != nil {
+	loadcfg()
+	if err := persist.InitAgent(cfg.Config.Agent.DataDir); err != nil {
 		l.Errorf("failed to init persist: %v", err)
 		os.Exit(1)
 	}
-	if flagUpstreamServerAddrs == nil {
-		l.Error("no upstream server addrs specified")
-		os.Exit(1)
-	}
-	ss := strings.Split(*flagUpstreamServerAddrs, ",")
-	var addrs []string
-	for _, addr := range ss {
-		if strings.TrimSpace(addr) == "" {
-			continue
-		}
-		addrs = append(addrs, addr)
-	}
-	agent.ServerAddrs = addrs
-	if err := agent.LoadPrivateKeyFromFile(*flagAgentPrivateKeyPath); err != nil {
+	agent.ServerAddrs = cfg.Config.Agent.ServerAddrs
+	if err := agent.LoadPrivateKeyFromFile(cfg.Config.Agent.PrivateKeyPath); err != nil {
 		l.Errorf("failed to load private key: %v", err)
 		os.Exit(1)
 	}
-	go keys.PubKeyLoader(*flagDataDir + "/pubkeys")
-	agent.DefaultChannel = *flagAgentChannel
-	if *flagServerAuthToken != "" {
-		agent.ServerAuthToken = *flagServerAuthToken
+	go keys.PubKeyLoader(cfg.Config.Agent.DataDir + "/pubkeys")
+	agent.DefaultChannel = cfg.Config.Agent.Channel
+	if cfg.Config.Agent.ServerAuthToken != "" {
+		agent.ServerAuthToken = cfg.Config.Agent.ServerAuthToken
 	}
 	if err := agent.Agent(); err != nil {
 		l.Errorf("failed to start agent: %v", err)

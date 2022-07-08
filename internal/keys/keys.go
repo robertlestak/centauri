@@ -158,7 +158,7 @@ func PubKeyLoader(d string) {
 		if err != nil {
 			l.Error("Error loading public key chain")
 		}
-		time.Sleep(time.Minute * 5)
+		time.Sleep(time.Minute)
 	}
 }
 

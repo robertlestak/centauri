@@ -3,6 +3,7 @@ package agent
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -126,7 +127,7 @@ func getMessage(channel string, id string, out string) error {
 	return nil
 }
 
-func getNextMessage(channel string, out string) error {
+func getNextMessage(channel string, out string) (string, error) {
 	l := log.WithFields(log.Fields{
 		"pkg": "agent",
 		"fn":  "getNextMessage",
@@ -136,11 +137,11 @@ func getNextMessage(channel string, out string) error {
 	msgs, err := CheckPendingMessages(channel)
 	if err != nil {
 		l.Errorf("error checking pending messages: %v", err)
-		return err
+		return "", err
 	}
 	if len(msgs) == 0 {
 		l.Debug("no pending messages")
-		return nil
+		return "", nil
 	}
 	l.Debugf("pending messages: %v", msgs)
 	// sort by created at
@@ -150,7 +151,30 @@ func getNextMessage(channel string, out string) error {
 	// get first message
 	msg := msgs[0]
 	// get message data
-	return getMessage(channel, msg.ID, out)
+	// print message id to stderr
+	fmt.Fprintf(os.Stderr, "id: %v\n", msg.ID)
+	return msg.ID, getMessage(channel, msg.ID, out)
+}
+
+func consumeNextMessage(channel string, out string) error {
+	l := log.WithFields(log.Fields{
+		"pkg": "agent",
+		"fn":  "consumeNextMessage",
+	})
+	l.Debug("consuming next message")
+	// get next message
+	id, err := getNextMessage(channel, out)
+	if err != nil {
+		l.Errorf("error getting next message: %v", err)
+		return err
+	}
+	// delete message
+	err = ConfirmMessageReceive(channel, id)
+	if err != nil {
+		l.Errorf("error deleting message: %v", err)
+		return err
+	}
+	return nil
 }
 
 func sendMessageFromInput() error {

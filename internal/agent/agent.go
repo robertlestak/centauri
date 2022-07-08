@@ -202,7 +202,10 @@ func Client() error {
 	case "get":
 		return getMessage(DefaultChannel, ClientMessageID, Output)
 	case "get-next":
-		return getNextMessage(DefaultChannel, Output)
+		_, err := getNextMessage(DefaultChannel, Output)
+		return err
+	case "consume-next":
+		return consumeNextMessage(DefaultChannel, Output)
 	case "list":
 		return listMessages(DefaultChannel, OutputFormat, Output)
 	case "send":
@@ -215,7 +218,7 @@ func Client() error {
 func ClientHelp() string {
 	return `
 Usage:
-  agent client [action]
+  cent [action]
 
 Actions:
   confirm
@@ -224,6 +227,8 @@ Actions:
 	get message
   get-next
 	get next message
+  consume-next
+	get next message and confirm it has been received
   list
 	list messages
   send

@@ -3,11 +3,11 @@ module github.com/robertlestak/centauri
 go 1.18
 
 require (
-	github.com/fsnotify/fsnotify v1.5.4
 	github.com/google/uuid v1.3.0
 	github.com/gorilla/mux v1.8.0
 	github.com/hashicorp/memberlist v0.3.1
 	github.com/sirupsen/logrus v1.8.1
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (

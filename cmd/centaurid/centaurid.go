@@ -11,6 +11,7 @@ import (
 	"github.com/robertlestak/centauri/internal/net"
 	"github.com/robertlestak/centauri/internal/persist"
 	"github.com/robertlestak/centauri/internal/server"
+	"github.com/robertlestak/centauri/pkg/cfg"
 	"github.com/robertlestak/centauri/pkg/message"
 	log "github.com/sirupsen/logrus"
 )
@@ -39,27 +40,71 @@ func init() {
 	log.SetLevel(ll)
 }
 
+func loadcfg() {
+	cfg.Init()
+	if cfg.Config.Peer.Name == "" {
+		cfg.Config.Peer.Name = *flagPeerName
+	}
+	if cfg.Config.Peer.DataDir == "" {
+		cfg.Config.Peer.DataDir = *flagDataDir
+	}
+	if cfg.Config.Peer.ConnectionMode == "" {
+		cfg.Config.Peer.ConnectionMode = *flagPeerConnectionMode
+	}
+	if cfg.Config.Peer.BindPort == 0 {
+		cfg.Config.Peer.BindPort = *flagPeerBindPort
+	}
+	if cfg.Config.Peer.AdvertisePort == 0 {
+		cfg.Config.Peer.AdvertisePort = *flagPeerAdvertisePort
+	}
+	if cfg.Config.Peer.AdvertiseAddr == "" {
+		cfg.Config.Peer.AdvertiseAddr = *flagPeerAdvertiseAddr
+	}
+	if len(cfg.Config.Peer.AllowedCidrs) == 0 {
+		cidrSpl := strings.Split(*flagPeerAllowedCidrs, ",")
+		for _, cidr := range cidrSpl {
+			if strings.TrimSpace(cidr) == "" {
+				continue
+			}
+			cfg.Config.Peer.AllowedCidrs = append(cfg.Config.Peer.AllowedCidrs, cidr)
+		}
+	}
+	if cfg.Config.Peer.ServerPort == "" {
+		cfg.Config.Peer.ServerPort = *flagServerPort
+	}
+	if cfg.Config.Peer.ServerTLSCertPath == "" {
+		cfg.Config.Peer.ServerTLSCertPath = *flagServerTLSCertPath
+	}
+	if cfg.Config.Peer.ServerTLSKeyPath == "" {
+		cfg.Config.Peer.ServerTLSKeyPath = *flagServerTLSKeyPath
+	}
+	if cfg.Config.Peer.ServerAuthToken == "" {
+		cfg.Config.Peer.ServerAuthToken = *flagServerAuthToken
+	}
+	if len(cfg.Config.Peer.PeerAddrs) == 0 {
+		addrSpl := strings.Split(*flagPeerAddrs, ",")
+		for _, addr := range addrSpl {
+			if strings.TrimSpace(addr) == "" {
+				continue
+			}
+			cfg.Config.Peer.PeerAddrs = append(cfg.Config.Peer.PeerAddrs, addr)
+		}
+	}
+}
+
 func peer() {
 	l := log.WithFields(log.Fields{
 		"pkg": "main",
 		"fn":  "peer",
 	})
 	l.Debug("starting")
-	if err := persist.Init(*flagDataDir, *flagPeerName); err != nil {
+	if err := persist.Init(cfg.Config.Peer.DataDir, cfg.Config.Peer.Name); err != nil {
 		l.Errorf("failed to init persist: %v", err)
 		os.Exit(1)
 	}
-	addrspl := strings.Split(*flagPeerAddrs, ",")
-	var addrs []string
-	for _, addr := range addrspl {
-		if strings.TrimSpace(addr) == "" {
-			continue
-		}
-		addrs = append(addrs, addr)
-	}
-	cidrSpl := strings.Split(*flagPeerAllowedCidrs, ",")
+
 	var cidrs []network.IPNet
-	for _, cidr := range cidrSpl {
+	for _, cidr := range cfg.Config.Peer.AllowedCidrs {
 		if strings.TrimSpace(cidr) == "" {
 			continue
 		}
@@ -86,14 +131,14 @@ func peer() {
 		l.Errorf("failed to create peer: %v", err)
 		os.Exit(1)
 	}
-	if len(addrs) > 0 {
-		err = net.Join(addrs)
+	if len(cfg.Config.Peer.PeerAddrs) > 0 {
+		err = net.Join(cfg.Config.Peer.PeerAddrs)
 		if err != nil {
 			l.Errorf("failed: %v", err)
 			os.Exit(1)
 		}
 	}
-	net.PeerName = *flagPeerName
+	net.PeerName = cfg.Config.Peer.Name
 	net.CreateQueue()
 	go net.CacheCleaner()
 	go persist.TimeoutCleaner()
@@ -110,7 +155,12 @@ func serv() {
 		"fn":  "serv",
 	})
 	l.Debug("starting")
-	if err := server.Server(*flagServerPort, *flagServerAuthToken, *flagServerTLSCertPath, *flagServerTLSKeyPath); err != nil {
+	if err := server.Server(
+		cfg.Config.Peer.ServerPort,
+		cfg.Config.Peer.ServerAuthToken,
+		cfg.Config.Peer.ServerTLSCertPath,
+		cfg.Config.Peer.ServerTLSKeyPath,
+	); err != nil {
 		l.Errorf("failed to start server: %v", err)
 		os.Exit(1)
 	}
@@ -140,6 +190,7 @@ func main() {
 		os.Exit(1)
 	}
 	wg.Add(1)
+	loadcfg()
 	go peer()
 	go serv()
 	wg.Wait()
