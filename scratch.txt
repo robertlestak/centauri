@@ -17,14 +17,14 @@ DATA=`echo -n $TSJ | base64 -w0`
 JD='{"public_key":"'$PUBKEY'","data":"'$DATA'","signature":"'$SIG'"}'
 SIG=`echo $JD | base64 -w0`
 
-go run cmd/centauri/*.go peer \
+go run cmd/centaurid/*.go \
     -data data -name foo \
     -advertise-port 50001 \
     -bind-port 50001 \
     -server-port 8080 -mode local
 
 
-go run cmd/centauri/*.go peer \
+go run cmd/centaurid/*.go \
     -data data -name foo2 \
     -advertise-port 50002 \
     -bind-port 50002 \

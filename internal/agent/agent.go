@@ -192,8 +192,8 @@ func Client() error {
 	var action string
 	// get action from command line
 	// second arg is action
-	if len(os.Args) > 2 {
-		action = os.Args[2]
+	if len(os.Args) > 1 {
+		action = os.Args[1]
 	}
 	l.Debugf("action: %s", action)
 	switch action {

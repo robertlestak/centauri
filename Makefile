@@ -1,13 +1,42 @@
-bin: bin/centauri_darwin bin/centauri_linux bin/centauri_windows
 
-bin/centauri_darwin:
-	mkdir -p bin
-	GOOS=darwin GOARCH=amd64 go build -o bin/centauri_darwin cmd/centauri/*.go
+binaries: centaurid cent centauri-agent
 
-bin/centauri_linux:
-	mkdir -p bin
-	GOOS=linux GOARCH=amd64 go build -o bin/centauri_linux cmd/centauri/*.go
+centaurid: bin/centaurid_darwin bin/centaurid_windows bin/centaurid_linux
+cent: bin/cent_darwin bin/cent_windows bin/cent_linux
+centauri-agent: bin/centauri-agent_darwin bin/centauri-agent_windows bin/centauri-agent_linux
 
-bin/centauri_windows:
+bin/centaurid_darwin:
 	mkdir -p bin
-	GOOS=windows GOARCH=amd64 go build -o bin/centauri_windows cmd/centauri/*.go
+	GOOS=darwin GOARCH=amd64 go build -o bin/centaurid_darwin cmd/centaurid/*.go
+
+bin/centaurid_linux:
+	mkdir -p bin
+	GOOS=linux GOARCH=amd64 go build -o bin/centaurid_linux cmd/centaurid/*.go
+
+bin/centaurid_windows:
+	mkdir -p bin
+	GOOS=windows GOARCH=amd64 go build -o bin/centaurid_windows cmd/centaurid/*.go
+
+bin/centauri-agent_darwin:
+	mkdir -p bin
+	GOOS=darwin GOARCH=amd64 go build -o bin/centauri-agent_darwin cmd/centauri-agent/*.go
+
+bin/centauri-agent_linux:
+	mkdir -p bin
+	GOOS=linux GOARCH=amd64 go build -o bin/centauri-agent_linux cmd/centauri-agent/*.go
+
+bin/centauri-agent_windows:
+	mkdir -p bin
+	GOOS=windows GOARCH=amd64 go build -o bin/centauri-agent_windows cmd/centauri-agent/*.go
+
+bin/cent_darwin:
+	mkdir -p bin
+	GOOS=darwin GOARCH=amd64 go build -o bin/cent_darwin cmd/cent/*.go
+
+bin/cent_linux:
+	mkdir -p bin
+	GOOS=linux GOARCH=amd64 go build -o bin/cent_linux cmd/cent/*.go
+
+bin/cent_windows:
+	mkdir -p bin
+	GOOS=windows GOARCH=amd64 go build -o bin/cent_windows cmd/cent/*.go

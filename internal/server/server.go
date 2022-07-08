@@ -156,7 +156,7 @@ func ValidateSignedRequest(r *http.Request) (string, error) {
 	return pubKeyID, nil
 }
 
-func Server(port string, authToken string) error {
+func Server(port string, authToken string, tlsCrtPath string, tlsKeyPath string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "server",
 		"fn":  "Server",
@@ -179,7 +179,11 @@ func Server(port string, authToken string) error {
 	r.HandleFunc("/messages", HandleListMesageMetaForPublicKey).Methods("LIST")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
-
-	// start server
-	return http.ListenAndServe(":"+port, r)
+	if tlsCrtPath != "" && tlsKeyPath != "" {
+		l.Debug("starting server with TLS")
+		return http.ListenAndServeTLS(":"+port, tlsCrtPath, tlsKeyPath, r)
+	} else {
+		l.Debug("starting server without TLS")
+		return http.ListenAndServe(":"+port, r)
+	}
 }
