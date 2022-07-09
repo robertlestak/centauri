@@ -36,7 +36,7 @@ spec:
               fieldPath: metadata.name
         ports:
           - containerPort: 5666
-            name: http
+            name: tcp-api
             protocol: TCP
           - containerPort: 5665
             name: tcp-centauri

@@ -16,4 +16,4 @@ spec:
     - protocol: TCP
       port: 5666
       targetPort: 5666
-      name: http-centauri
+      name: tcp-api

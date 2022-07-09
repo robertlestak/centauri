@@ -362,13 +362,14 @@ func CheckPendingMessages(channel string) ([]MessageMeta, error) {
 		return msgs, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		l.Errorf("error checking pending messages: %v", resp.StatusCode)
-		return msgs, err
-	}
 	bd, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		l.Errorf("error reading response: %v", err)
+		return msgs, err
+	}
+	if resp.StatusCode != 200 {
+		l.Errorf("error checking pending messages: %v", resp.StatusCode)
+		l.Debugf("response: %s", string(bd))
 		return msgs, err
 	}
 
