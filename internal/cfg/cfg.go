@@ -23,18 +23,20 @@ type ClientConfig struct {
 }
 
 type PeerConfig struct {
-	Name              string   `yaml:"name"`
-	ConnectionMode    string   `yaml:"connectionMode"`
-	BindPort          int      `yaml:"bindPort"`
-	AdvertisePort     int      `yaml:"advertisePort"`
-	AdvertiseAddr     string   `yaml:"advertiseAddr"`
-	AllowedCidrs      []string `yaml:"allowedCidrs"`
-	ServerPort        string   `yaml:"serverPort"`
-	ServerTLSCertPath string   `yaml:"serverTLSCertPath"`
-	ServerTLSKeyPath  string   `yaml:"serverTLSKeyPath"`
-	PeerAddrs         []string `yaml:"peerAddrs"`
-	DataDir           string   `yaml:"dataDir"`
-	ServerAuthToken   string   `yaml:"serverAuthToken"`
+	Name                string   `yaml:"name"`
+	ConnectionMode      string   `yaml:"connectionMode"`
+	GossipBindPort      int      `yaml:"gossipBindPort"`
+	GossipAdvertisePort int      `yaml:"gossipAdvertisePort"`
+	DataBindPort        int      `yaml:"dataBindPort"`
+	DataAdvertisePort   int      `yaml:"dataAdvertisePort"`
+	AdvertiseAddr       string   `yaml:"advertiseAddr"`
+	AllowedCidrs        []string `yaml:"allowedCidrs"`
+	ServerPort          int      `yaml:"serverPort"`
+	ServerTLSCertPath   string   `yaml:"serverTLSCertPath"`
+	ServerTLSKeyPath    string   `yaml:"serverTLSKeyPath"`
+	PeerAddrs           []string `yaml:"peerAddrs"`
+	DataDir             string   `yaml:"dataDir"`
+	ServerAuthToken     string   `yaml:"serverAuthToken"`
 }
 
 type AgentConfig struct {

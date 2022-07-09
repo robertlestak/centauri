@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/robertlestak/centauri/internal/events"
 	"github.com/robertlestak/centauri/internal/keys"
+	"github.com/robertlestak/centauri/internal/net"
 	"github.com/robertlestak/centauri/internal/persist"
 	log "github.com/sirupsen/logrus"
 )
@@ -86,10 +87,7 @@ func (m *Message) Create() (*Message, error) {
 		l.Errorf("error storing message: %v", err)
 		return nil, err
 	}
-	if err := events.NewMessage(m.PublicKeyID, m.Channel, m.ID, m.Data); err != nil {
-		l.Errorf("error creating message: %v", err)
-		return nil, err
-	}
+	events.NewMessage(m.PublicKeyID, m.Channel, m.ID)
 	return m, nil
 }
 
@@ -140,19 +138,29 @@ func GetMessageByID(pubKeyID string, channel string, id string) (*Message, error
 	return m, nil
 }
 
-func GetMessageFromPeer(pubKeyID string, channel string, id string, data []byte) error {
+func GetMessageFromPeer(pubKeyID string, channel string, id string, peerAddr string, peerPort int) error {
 	l := log.WithFields(log.Fields{
-		"pkg": "message",
-		"fn":  "GetMessageFromPeer",
+		"pkg":      "message",
+		"fn":       "GetMessageFromPeer",
+		"pubKeyID": pubKeyID,
+		"channel":  channel,
+		"id":       id,
+		"peerAddr": peerAddr,
+		"peerPort": peerPort,
 	})
-	l.Debug("getting message from peer")
+	l.Debugf("getting message from peer %s:%d", peerAddr, peerPort)
+	md, err := net.RequestDataFromPeer(peerAddr, peerPort, pubKeyID, channel, id)
+	if err != nil {
+		l.Errorf("error getting message: %v", err)
+		return err
+	}
 	channel = CleanString(channel)
 	msg := &Message{
 		Type:        "bytes",
 		ID:          id,
 		Channel:     channel,
 		PublicKeyID: pubKeyID,
-		Data:        data,
+		Data:        md,
 	}
 	if err := msg.StoreLocal(); err != nil {
 		l.Errorf("error storing message: %v", err)
@@ -173,10 +181,7 @@ func DeleteMessageByID(pubKeyID string, channel string, id string, eventTrigger 
 		return err
 	}
 	if !eventTrigger {
-		if err := events.DeleteMessage(pubKeyID, channel, id); err != nil {
-			l.Errorf("error deleting message: %v", err)
-			return err
-		}
+		events.DeleteMessage(pubKeyID, channel, id)
 	}
 	return nil
 }

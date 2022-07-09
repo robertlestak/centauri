@@ -14,6 +14,10 @@ spec:
     component: peer
   ports:
     - protocol: TCP
+      port: 5664
+      targetPort: 5664
+      name: tcp-data
+    - protocol: TCP
       port: 5665
       targetPort: 5665
       name: tcp-centauri

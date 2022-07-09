@@ -12,6 +12,8 @@ import (
 
 var (
 	PeerName                  string
+	PeerAddr                  string
+	PeerDataPort              int
 	NotifyMessageEventHandler func(data []byte) error
 	mtx                       sync.RWMutex
 	List                      *memberlist.Memberlist
@@ -23,9 +25,9 @@ type BroadcastMessage struct {
 	Type     string `json:"type"`
 	Channel  string `json:"channel"`
 	PubKeyID string `json:"pubKeyID"`
-	PeerName string `json:"peerName"`
 	ID       string `json:"id"`
-	Data     []byte `json:"data"`
+	PeerAddr string `json:"peerAddr"`
+	PeerPort int    `json:"peerPort"`
 }
 
 type broadcast struct {
@@ -93,15 +95,27 @@ func (d *delegate) MergeRemoteState(buf []byte, join bool) {
 type eventDelegate struct{}
 
 func (ed *eventDelegate) NotifyJoin(node *memberlist.Node) {
-	log.Println("A node has joined: " + node.String())
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "NotifyJoin",
+	})
+	l.Debugf("A node has joined: " + node.String())
 }
 
 func (ed *eventDelegate) NotifyLeave(node *memberlist.Node) {
-	log.Println("A node has left: " + node.String())
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "NotifyLeave",
+	})
+	l.Debugf("A node has left: " + node.String())
 }
 
 func (ed *eventDelegate) NotifyUpdate(node *memberlist.Node) {
-	log.Println("A node was updated: " + node.String())
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "NotifyUpdate",
+	})
+	l.Debugf("A node has updated: " + node.String())
 }
 
 func (b *broadcast) Invalidates(other memberlist.Broadcast) bool {
@@ -123,6 +137,17 @@ func ListMembers() []*memberlist.Node {
 	// 	log.Printf("Member: %s %s\n", member.Name, member.Addr)
 	// }
 	return List.Members()
+}
+
+func NodeAddr() string {
+	return List.LocalNode().Addr.String()
+}
+
+func AdvertiseAddr() string {
+	if PeerAddr != "" {
+		return PeerAddr
+	}
+	return NodeAddr()
 }
 
 func Create(nodeName string, addr string, advPort int, bindPort int, connMode string, cidrsAllowed []network.IPNet) error {
@@ -186,71 +211,107 @@ func Broadcast(msg []byte) {
 	})
 }
 
-func BroadcastNewMessage(pubKeyID string, channel string, id string, data []byte) error {
+func BroadcastNewMessage(pubKeyID string, channel string, id string) error {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "BroadcastNewMessage",
+	})
+	l.Debugf("Broadcasting new message for pubKeyID: %s, channel: %s, id: %s", pubKeyID, channel, id)
 	msg := &BroadcastMessage{
 		Type:     "newMessage",
 		Channel:  channel,
 		PubKeyID: pubKeyID,
-		PeerName: PeerName,
+		PeerAddr: AdvertiseAddr(),
+		PeerPort: PeerDataPort,
 		ID:       id,
-		Data:     data,
 	}
 	b, err := json.Marshal(msg)
 	if err != nil {
-		log.Errorf("failed to marshal message: %v", err)
+		l.Errorf("failed to marshal message: %v", err)
 		return err
 	}
 	Broadcast(b)
+	l.Debug("broadcasted message")
 	return nil
 }
 
 func BroadcastDeleteMessage(pubKeyID string, channel string, id string) error {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "BroadcastDeleteMessage",
+	})
+	l.Debugf("Broadcasting delete message for pubKeyID: %s, channel: %s, id: %s", pubKeyID, channel, id)
 	msg := &BroadcastMessage{
 		Type:     "deleteMessage",
 		PubKeyID: pubKeyID,
-		PeerName: PeerName,
 		Channel:  channel,
 		ID:       id,
 	}
 	b, err := json.Marshal(msg)
 	if err != nil {
-		log.Errorf("failed to marshal message: %v", err)
+		l.Errorf("failed to marshal message: %v", err)
 		return err
 	}
 	Broadcast(b)
+	l.Debug("broadcasted message")
 	return nil
 }
 
 func storeNewMessage(mtype string, pubKeyID, channel, id string) {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "storeNewMessage",
+	})
+	l.Debugf("Storing new message for pubKeyID: %s, channel: %s, id: %s", pubKeyID, channel, id)
 	mtx.Lock()
 	recentMessages[pubKeyID] = append(recentMessages[pubKeyID], mtype+"_"+channel+"_"+id)
 	mtx.Unlock()
 }
 
 func checkMessageHandled(mtype string, pubKeyID, channel, id string) bool {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "checkMessageHandled",
+	})
+	l.Debugf("Checking if message handled for pubKeyID: %s, channel: %s, id: %s", pubKeyID, channel, id)
 	mtx.RLock()
 	_, ok := recentMessages[pubKeyID]
 	mtx.RUnlock()
 	if !ok {
+		l.Debug("pubkey not handled")
 		return false
 	}
 	for _, v := range recentMessages[pubKeyID] {
 		if v == mtype+"_"+channel+"_"+id {
+			l.Debug("message handled")
 			return true
 		}
 	}
+	l.Debug("message not handled")
 	return false
 }
 
 func clearLocalCache() {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "clearLocalCache",
+	})
+	l.Debug("Clearing local cache")
 	mtx.Lock()
 	recentMessages = map[string][]string{}
 	mtx.Unlock()
 }
 
 func CacheCleaner() {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "CacheCleaner",
+	})
+	l.Debug("Cache cleaner started")
 	for {
 		time.Sleep(time.Minute * 5)
+		l.Debug("Cleaning local cache")
 		clearLocalCache()
+		l.Debug("Local cache cleaned")
 	}
 }

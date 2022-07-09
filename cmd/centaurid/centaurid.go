@@ -19,20 +19,22 @@ import (
 )
 
 var (
-	Version                = "unknown"
-	wg                     sync.WaitGroup
-	flagPeerConnectionMode *string
-	flagPeerBindPort       *int
-	flagPeerAdvertisePort  *int
-	flagPeerAdvertiseAddr  *string
-	flagPeerAllowedCidrs   *string
-	flagServerPort         *string
-	flagServerTLSCertPath  *string
-	flagServerTLSKeyPath   *string
-	flagPeerAddrs          *string
-	flagPeerName           *string
-	flagDataDir            *string
-	flagServerAuthToken    *string
+	Version                     = "unknown"
+	wg                          sync.WaitGroup
+	flagPeerConnectionMode      *string
+	flagPeerGossipBindPort      *int
+	flagPeerGossipAdvertisePort *int
+	flagPeerDataBindPort        *int
+	flagPeerDataAdvertisePort   *int
+	flagPeerAdvertiseAddr       *string
+	flagPeerAllowedCidrs        *string
+	flagServerPort              *int
+	flagServerTLSCertPath       *string
+	flagServerTLSKeyPath        *string
+	flagPeerAddrs               *string
+	flagPeerName                *string
+	flagDataDir                 *string
+	flagServerAuthToken         *string
 )
 
 func init() {
@@ -51,13 +53,13 @@ func loadcfg() {
 	cfg.Init()
 	if *flagPeerName != "" {
 		cfg.Config.Peer.Name = *flagPeerName
-		if cfg.Config.Peer.Name == "" {
-			hostname, err := os.Hostname()
-			if err != nil {
-				log.Fatal(err)
-			}
-			cfg.Config.Peer.Name = hostname + "-" + uuid.New().String()
+	}
+	if cfg.Config.Peer.Name == "" {
+		hostname, err := os.Hostname()
+		if err != nil {
+			log.Fatal(err)
 		}
+		cfg.Config.Peer.Name = hostname + "-" + uuid.New().String()
 	}
 	if *flagDataDir != "" {
 		cfg.Config.Peer.DataDir = *flagDataDir
@@ -65,14 +67,20 @@ func loadcfg() {
 	if *flagPeerConnectionMode != "" {
 		cfg.Config.Peer.ConnectionMode = *flagPeerConnectionMode
 	}
-	if *flagPeerBindPort != 0 {
-		cfg.Config.Peer.BindPort = *flagPeerBindPort
+	if *flagPeerGossipBindPort != 0 {
+		cfg.Config.Peer.GossipBindPort = *flagPeerGossipBindPort
 	}
-	if *flagPeerAdvertisePort != 0 {
-		cfg.Config.Peer.AdvertisePort = *flagPeerAdvertisePort
+	if *flagPeerGossipAdvertisePort != 0 {
+		cfg.Config.Peer.GossipAdvertisePort = *flagPeerGossipAdvertisePort
 	}
 	if *flagPeerAdvertiseAddr != "" {
 		cfg.Config.Peer.AdvertiseAddr = *flagPeerAdvertiseAddr
+	}
+	if *flagPeerDataBindPort != 0 {
+		cfg.Config.Peer.DataBindPort = *flagPeerDataBindPort
+	}
+	if *flagPeerDataAdvertisePort != 0 {
+		cfg.Config.Peer.DataAdvertisePort = *flagPeerDataAdvertisePort
 	}
 	if *flagPeerAllowedCidrs != "" {
 		cidrSpl := strings.Split(*flagPeerAllowedCidrs, ",")
@@ -83,7 +91,7 @@ func loadcfg() {
 			cfg.Config.Peer.AllowedCidrs = append(cfg.Config.Peer.AllowedCidrs, cidr)
 		}
 	}
-	if *flagServerPort != "" {
+	if *flagServerPort != 0 {
 		cfg.Config.Peer.ServerPort = *flagServerPort
 	}
 	if *flagServerTLSCertPath != "" {
@@ -134,11 +142,11 @@ func peer() {
 	}
 	var err error
 	err = net.Create(
-		*flagPeerName,
-		*flagPeerAdvertiseAddr,
-		*flagPeerAdvertisePort,
-		*flagPeerBindPort,
-		*flagPeerConnectionMode,
+		cfg.Config.Peer.Name,
+		cfg.Config.Peer.AdvertiseAddr,
+		cfg.Config.Peer.GossipAdvertisePort,
+		cfg.Config.Peer.GossipBindPort,
+		cfg.Config.Peer.ConnectionMode,
 		cidrs,
 	)
 	if err != nil {
@@ -152,8 +160,14 @@ func peer() {
 			os.Exit(1)
 		}
 	}
+	if cfg.Config.Peer.DataAdvertisePort == 0 {
+		cfg.Config.Peer.DataAdvertisePort = cfg.Config.Peer.DataBindPort
+	}
 	net.PeerName = cfg.Config.Peer.Name
+	net.PeerAddr = cfg.Config.Peer.AdvertiseAddr
+	net.PeerDataPort = cfg.Config.Peer.DataAdvertisePort
 	net.CreateQueue()
+	go net.DataServer(cfg.Config.Peer.DataBindPort)
 	go net.CacheCleaner()
 	go persist.TimeoutCleaner()
 	events.DeletionHandlers = append(events.DeletionHandlers, net.BroadcastDeleteMessage)
@@ -187,14 +201,16 @@ func main() {
 	})
 	l.Debug("starting")
 	flagPeer := flag.NewFlagSet("centaurid", flag.ExitOnError)
-	flagPeerBindPort = flagPeer.Int("bind-port", 5665, "peer port to bind")
-	flagPeerAdvertisePort = flagPeer.Int("advertise-port", 5665, "peer port to advertise")
+	flagPeerDataBindPort = flagPeer.Int("data-bind-port", 5664, "peer port to bind")
+	flagPeerDataAdvertisePort = flagPeer.Int("data-advertise-port", 5664, "peer port to advertise")
+	flagPeerGossipBindPort = flagPeer.Int("gossip-bind-port", 5665, "peer port to bind")
+	flagPeerGossipAdvertisePort = flagPeer.Int("gossip-advertise-port", 5665, "peer port to advertise")
 	flagPeerAdvertiseAddr = flagPeer.String("advertise-addr", "", "peer address to advertise")
 	flagPeerAddrs = flagPeer.String("addrs", "", "addresses to join")
 	flagPeerAllowedCidrs = flagPeer.String("cidrs", "", "cidrs to allow. comma separated. empty for all")
 	flagPeerConnectionMode = flagPeer.String("mode", "lan", "peer connection mode (lan, wan, local)")
 	flagServerAuthToken = flagPeer.String("server-token", "", "auth token for server")
-	flagServerPort = flagPeer.String("server-port", "5666", "port to use for server")
+	flagServerPort = flagPeer.Int("server-port", 5666, "port to use for server")
 	flagServerTLSCertPath = flagPeer.String("server-cert", "", "path to server TLS cert")
 	flagServerTLSKeyPath = flagPeer.String("server-key", "", "path to server TLS key")
 	flagPeerName = flagPeer.String("name", "", "name of this node")

@@ -38,6 +38,9 @@ spec:
           - containerPort: 5666
             name: tcp-api
             protocol: TCP
+          - containerPort: 5664
+            name: tcp-data
+            protocol: TCP
           - containerPort: 5665
             name: tcp-centauri
             protocol: TCP

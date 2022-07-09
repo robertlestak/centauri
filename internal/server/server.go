@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -165,7 +166,7 @@ func handleHealthcheck(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func Server(port string, authToken string, tlsCrtPath string, tlsKeyPath string) error {
+func Server(port int, authToken string, tlsCrtPath string, tlsKeyPath string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "server",
 		"fn":  "Server",
@@ -189,11 +190,12 @@ func Server(port string, authToken string, tlsCrtPath string, tlsKeyPath string)
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
 	r.HandleFunc("/statusz", handleHealthcheck).Methods("GET")
+	sPort := fmt.Sprintf(":%d", port)
 	if tlsCrtPath != "" && tlsKeyPath != "" {
 		l.Debug("starting server with TLS")
-		return http.ListenAndServeTLS(":"+port, tlsCrtPath, tlsKeyPath, r)
+		return http.ListenAndServeTLS(sPort, tlsCrtPath, tlsKeyPath, r)
 	} else {
 		l.Debug("starting server without TLS")
-		return http.ListenAndServe(":"+port, r)
+		return http.ListenAndServe(sPort, r)
 	}
 }

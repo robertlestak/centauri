@@ -1,7 +1,6 @@
 package events
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 
@@ -11,39 +10,31 @@ import (
 var (
 	PeerName                 string
 	DeletionHandlers         = []func(pubKeyID, channel string, id string) error{}
-	NewMessageHandlers       = []func(pubKeyID, channel string, id string, data []byte) error{}
+	NewMessageHandlers       = []func(pubKeyID, channel string, id string) error{}
 	ReceivedDeletionHandlers = []func(pubKeyID, channel string, id string, eventTrigger bool) error{}
-	ReceivedMessageHandlers  = []func(pubKeyID, channel string, id string, data []byte) error{}
+	ReceivedMessageHandlers  = []func(pubKeyID string, channel string, id string, peerAddr string, peerPort int) error{}
 )
 
-func DeleteMessage(pubKeyID, channel, id string) error {
+func DeleteMessage(pubKeyID, channel, id string) {
 	l := log.WithFields(log.Fields{
 		"pkg": "events",
 		"fn":  "DeleteMessage",
 	})
 	l.Debug("deleting message")
 	for _, f := range DeletionHandlers {
-		if err := f(pubKeyID, channel, id); err != nil {
-			l.Errorf("error deleting message: %v", err)
-			return err
-		}
+		go f(pubKeyID, channel, id)
 	}
-	return nil
 }
 
-func NewMessage(pubKeyID, channel string, id string, data []byte) error {
+func NewMessage(pubKeyID, channel string, id string) {
 	l := log.WithFields(log.Fields{
 		"pkg": "events",
 		"fn":  "NewMessage",
 	})
 	l.Debug("new message")
 	for _, f := range NewMessageHandlers {
-		if err := f(pubKeyID, channel, id, data); err != nil {
-			l.Errorf("error new message: %v", err)
-			return err
-		}
+		go f(pubKeyID, channel, id)
 	}
-	return nil
 }
 
 func ReceiveMessage(data []byte) error {
@@ -63,14 +54,10 @@ func ReceiveMessage(data []byte) error {
 		pubKeyID := md["pubKeyID"].(string)
 		id := md["id"].(string)
 		channel := md["channel"].(string)
-		data := md["data"].(string)
-		bd, err := base64.StdEncoding.DecodeString(data)
-		if err != nil {
-			l.Errorf("error decoding message: %v", err)
-			return err
-		}
+		peerAddr := md["peerAddr"].(string)
+		peerDataPort := int(md["peerPort"].(float64))
 		for _, f := range ReceivedMessageHandlers {
-			if err := f(pubKeyID, channel, id, bd); err != nil {
+			if err := f(pubKeyID, channel, id, peerAddr, peerDataPort); err != nil {
 				l.Errorf("error receiving message: %v", err)
 				return err
 			}
