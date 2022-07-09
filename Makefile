@@ -1,6 +1,8 @@
 
 binaries: centaurid cent centauri-agent
 
+docker: docker-centaurid docker-cent docker-centauri-agent
+
 centaurid: bin/centaurid_darwin bin/centaurid_windows bin/centaurid_linux
 cent: bin/cent_darwin bin/cent_windows bin/cent_linux
 centauri-agent: bin/centauri-agent_darwin bin/centauri-agent_windows bin/centauri-agent_linux
@@ -40,3 +42,15 @@ bin/cent_linux:
 bin/cent_windows:
 	mkdir -p bin
 	GOOS=windows GOARCH=amd64 go build -o bin/cent_windows cmd/cent/*.go
+
+docker-centaurid:
+	docker build -f devops/docker/centaurid.Dockerfile -t centaurid .
+
+docker-centauri-agent:
+	docker build -f devops/docker/centauri-agent.Dockerfile -t centauri-agent .
+
+docker-cent:
+	docker build -f devops/docker/cent.Dockerfile -t cent .
+
+.PHONY: docker binaries centaurid cent centauri-agent
+.PHONY: docker-centaurid docker-centauri-agent docker-cent

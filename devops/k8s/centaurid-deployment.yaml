@@ -1,0 +1,68 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: centaurid
+  namespace: centauri
+  labels:
+    app: centauri
+    component: peer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: centauri
+      component: peer
+  template:
+    metadata:
+      labels:
+        app: centauri
+        component: peer
+    spec:
+      containers:
+      - name: centaurid
+        image: registry.lestak.sh/centaurid:1
+        args:
+        - "-data"
+        - "/data"
+        - "-mode"
+        - "wan"
+        - "-name"
+        - "$(POD_NAME)"
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        ports:
+          - containerPort: 5666
+            name: http
+            protocol: TCP
+          - containerPort: 5665
+            name: tcp-centauri
+            protocol: TCP
+          - containerPort: 5665
+            name: udp-centauri
+            protocol: UDP
+        livenessProbe:
+          httpGet:
+            port: 5666
+            path: /statusz
+        readinessProbe:
+          httpGet:
+            port: 5666
+            path: /statusz
+        volumeMounts:
+        - mountPath: "/data"
+          name: data
+        # resources:
+        #   requests:
+        #     cpu: 1000m
+        #     memory: 1000Mi
+        #   limits:
+        #     cpu: 6000m
+        #     memory: 12Gi
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: centaurid

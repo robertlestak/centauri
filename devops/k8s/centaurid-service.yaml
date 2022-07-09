@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: centaurid
+  namespace: centauri
+  labels:
+    app: centauri
+    component: peer
+spec:
+  type: ClusterIP
+  selector:
+    app: centauri
+    component: peer
+  ports:
+    - protocol: TCP
+      port: 5666
+      targetPort: 5666
+      name: http
+    - protocol: TCP
+      port: 5665
+      targetPort: 5665
+      name: tcp-centauri
+    - protocol: UDP
+      port: 5665
+      targetPort: 5665
+      name: udp-centauri

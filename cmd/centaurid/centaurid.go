@@ -7,11 +7,12 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/google/uuid"
+	"github.com/robertlestak/centauri/internal/cfg"
 	"github.com/robertlestak/centauri/internal/events"
 	"github.com/robertlestak/centauri/internal/net"
 	"github.com/robertlestak/centauri/internal/persist"
 	"github.com/robertlestak/centauri/internal/server"
-	"github.com/robertlestak/centauri/pkg/cfg"
 	"github.com/robertlestak/centauri/pkg/message"
 	log "github.com/sirupsen/logrus"
 )
@@ -44,6 +45,13 @@ func loadcfg() {
 	cfg.Init()
 	if cfg.Config.Peer.Name == "" {
 		cfg.Config.Peer.Name = *flagPeerName
+		if cfg.Config.Peer.Name == "" {
+			hostname, err := os.Hostname()
+			if err != nil {
+				log.Fatal(err)
+			}
+			cfg.Config.Peer.Name = hostname + "-" + uuid.New().String()
+		}
 	}
 	if cfg.Config.Peer.DataDir == "" {
 		cfg.Config.Peer.DataDir = *flagDataDir

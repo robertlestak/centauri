@@ -7,9 +7,9 @@ import (
 	"sync"
 
 	"github.com/robertlestak/centauri/internal/agent"
+	"github.com/robertlestak/centauri/internal/cfg"
 	"github.com/robertlestak/centauri/internal/keys"
 	"github.com/robertlestak/centauri/internal/persist"
-	"github.com/robertlestak/centauri/pkg/cfg"
 	log "github.com/sirupsen/logrus"
 )
 
