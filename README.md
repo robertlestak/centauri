@@ -1,8 +1,8 @@
-# Centauri - decentralized p2p message bus
+# Centauri - decentralized p2p data bus
 
 [Read the Docs](https://centauri.sh/docs/)
 
-Centauri is a decentralized, peer-to-peer (p2p), asynchronous, ephemeral, and fault-tolerant message bus. Centauri enables disconnected users around the world to transfer files, messages, and any other type of data without having a direct network connection between nodes or concurrent active sessions for p2p transfers.
+Centauri is a decentralized, peer-to-peer (p2p), asynchronous, ephemeral, and fault-tolerant data bus. Centauri enables disconnected users around the world to transfer files, messages, and any other type of data without having a direct network connection between nodes or concurrent active sessions for p2p transfers.
 
 Centauri is similar to cryptocurrencies such as Ethereum and Bitcoin in that it utilizes a globally replicated network to exchange information secured with cryptographic keys, however unlike conventional cryptocurrency technologies, instead of blockchain linked lists, Centauri more closely mirrors Hyperledger Fabric's network model of peers communicating over gossip protocol to share current message state, with a hint of bittorrent's p2p file transfer model.
  
