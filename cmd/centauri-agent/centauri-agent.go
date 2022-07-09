@@ -34,16 +34,16 @@ func init() {
 
 func loadcfg() {
 	cfg.Init()
-	if cfg.Config.Agent.Channel == "" {
+	if *flagAgentChannel != "" {
 		cfg.Config.Agent.Channel = *flagAgentChannel
 	}
-	if cfg.Config.Agent.PrivateKeyPath == "" {
+	if *flagAgentPrivateKeyPath != "" {
 		cfg.Config.Agent.PrivateKeyPath = *flagAgentPrivateKeyPath
 	}
-	if cfg.Config.Agent.ServerAuthToken == "" {
+	if *flagServerAuthToken != "" {
 		cfg.Config.Agent.ServerAuthToken = *flagServerAuthToken
 	}
-	if len(cfg.Config.Agent.ServerAddrs) == 0 {
+	if *flagUpstreamServerAddrs != "" {
 		ss := strings.Split(*flagUpstreamServerAddrs, ",")
 		var addrs []string
 		for _, addr := range ss {
@@ -54,7 +54,7 @@ func loadcfg() {
 		}
 		cfg.Config.Agent.ServerAddrs = addrs
 	}
-	if cfg.Config.Agent.DataDir == "" {
+	if *flagDataDir != "" {
 		cfg.Config.Agent.DataDir = *flagDataDir
 	}
 }

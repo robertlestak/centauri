@@ -49,7 +49,7 @@ func version() {
 
 func loadcfg() {
 	cfg.Init()
-	if cfg.Config.Peer.Name == "" {
+	if *flagPeerName != "" {
 		cfg.Config.Peer.Name = *flagPeerName
 		if cfg.Config.Peer.Name == "" {
 			hostname, err := os.Hostname()
@@ -59,22 +59,22 @@ func loadcfg() {
 			cfg.Config.Peer.Name = hostname + "-" + uuid.New().String()
 		}
 	}
-	if cfg.Config.Peer.DataDir == "" {
+	if *flagDataDir != "" {
 		cfg.Config.Peer.DataDir = *flagDataDir
 	}
-	if cfg.Config.Peer.ConnectionMode == "" {
+	if *flagPeerConnectionMode != "" {
 		cfg.Config.Peer.ConnectionMode = *flagPeerConnectionMode
 	}
-	if cfg.Config.Peer.BindPort == 0 {
+	if *flagPeerBindPort != 0 {
 		cfg.Config.Peer.BindPort = *flagPeerBindPort
 	}
-	if cfg.Config.Peer.AdvertisePort == 0 {
+	if *flagPeerAdvertisePort != 0 {
 		cfg.Config.Peer.AdvertisePort = *flagPeerAdvertisePort
 	}
-	if cfg.Config.Peer.AdvertiseAddr == "" {
+	if *flagPeerAdvertiseAddr != "" {
 		cfg.Config.Peer.AdvertiseAddr = *flagPeerAdvertiseAddr
 	}
-	if len(cfg.Config.Peer.AllowedCidrs) == 0 {
+	if *flagPeerAllowedCidrs != "" {
 		cidrSpl := strings.Split(*flagPeerAllowedCidrs, ",")
 		for _, cidr := range cidrSpl {
 			if strings.TrimSpace(cidr) == "" {
@@ -83,19 +83,19 @@ func loadcfg() {
 			cfg.Config.Peer.AllowedCidrs = append(cfg.Config.Peer.AllowedCidrs, cidr)
 		}
 	}
-	if cfg.Config.Peer.ServerPort == "" {
+	if *flagServerPort != "" {
 		cfg.Config.Peer.ServerPort = *flagServerPort
 	}
-	if cfg.Config.Peer.ServerTLSCertPath == "" {
+	if *flagServerTLSCertPath != "" {
 		cfg.Config.Peer.ServerTLSCertPath = *flagServerTLSCertPath
 	}
-	if cfg.Config.Peer.ServerTLSKeyPath == "" {
+	if *flagServerTLSKeyPath != "" {
 		cfg.Config.Peer.ServerTLSKeyPath = *flagServerTLSKeyPath
 	}
-	if cfg.Config.Peer.ServerAuthToken == "" {
+	if *flagServerAuthToken != "" {
 		cfg.Config.Peer.ServerAuthToken = *flagServerAuthToken
 	}
-	if len(cfg.Config.Peer.PeerAddrs) == 0 {
+	if *flagPeerAddrs != "" {
 		addrSpl := strings.Split(*flagPeerAddrs, ",")
 		for _, addr := range addrSpl {
 			if strings.TrimSpace(addr) == "" {

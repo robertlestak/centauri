@@ -38,22 +38,22 @@ func init() {
 
 func loadcfg() {
 	cfg.Init()
-	if cfg.Config.Client.Channel == "" {
+	if *flagAgentChannel != "" {
 		cfg.Config.Client.Channel = *flagAgentChannel
 	}
-	if cfg.Config.Client.Output == "" {
+	if *flagClientOutput != "" {
 		cfg.Config.Client.Output = *flagClientOutput
 	}
-	if cfg.Config.Client.Format == "" {
+	if *flagClientOutputFormat != "" {
 		cfg.Config.Client.Format = *flagClientOutputFormat
 	}
-	if cfg.Config.Client.PrivateKeyPath == "" {
+	if *flagClientPrivateKeyPath != "" {
 		cfg.Config.Client.PrivateKeyPath = *flagClientPrivateKeyPath
 	}
-	if cfg.Config.Client.ServerAuthToken == "" {
+	if *flagServerAuthToken != "" {
 		cfg.Config.Client.ServerAuthToken = *flagServerAuthToken
 	}
-	if len(cfg.Config.Client.ServerAddrs) == 0 {
+	if *flagUpstreamServerAddrs != "" {
 		ss := strings.Split(*flagUpstreamServerAddrs, ",")
 		var addrs []string
 		for _, addr := range ss {
