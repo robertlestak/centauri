@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	Version                      = "unknown"
 	flagAgentChannel             *string
 	flagClientOutput             *string
 	flagClientOutputFormat       *string
@@ -66,6 +67,10 @@ func loadcfg() {
 	if cfg.Config.Client.ServerAuthToken != "" {
 		agent.ServerAuthToken = cfg.Config.Client.ServerAuthToken
 	}
+}
+
+func version() {
+	fmt.Printf("version: %s\n", Version)
 }
 
 func clnt() {
@@ -140,6 +145,10 @@ func main() {
 	if err := flagClient.Parse(os.Args[2:]); err != nil {
 		l.Errorf("failed to parse flags: %v", err)
 		os.Exit(1)
+	}
+	if os.Args[1] == "version" {
+		version()
+		os.Exit(0)
 	}
 	clnt()
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	network "net"
 	"os"
 	"strings"
@@ -18,6 +19,7 @@ import (
 )
 
 var (
+	Version                = "unknown"
 	wg                     sync.WaitGroup
 	flagPeerConnectionMode *string
 	flagPeerBindPort       *int
@@ -39,6 +41,10 @@ func init() {
 		ll = log.InfoLevel
 	}
 	log.SetLevel(ll)
+}
+
+func version() {
+	fmt.Printf("version: %s\n", Version)
 }
 
 func loadcfg() {
@@ -196,6 +202,10 @@ func main() {
 	if err := flagPeer.Parse(os.Args[1:]); err != nil {
 		l.Errorf("failed to parse flags: %v", err)
 		os.Exit(1)
+	}
+	if os.Args[1] == "version" {
+		version()
+		os.Exit(0)
 	}
 	wg.Add(1)
 	loadcfg()

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -14,6 +15,7 @@ import (
 )
 
 var (
+	Version                 = "unknown"
 	wg                      sync.WaitGroup
 	flagAgentChannel        *string
 	flagAgentPrivateKeyPath *string
@@ -55,6 +57,10 @@ func loadcfg() {
 	if cfg.Config.Agent.DataDir == "" {
 		cfg.Config.Agent.DataDir = *flagDataDir
 	}
+}
+
+func version() {
+	fmt.Printf("version: %s\n", Version)
 }
 
 func agnt() {
@@ -99,6 +105,10 @@ func main() {
 	if err := flagAgent.Parse(os.Args[1:]); err != nil {
 		l.Errorf("failed to parse flags: %v", err)
 		os.Exit(1)
+	}
+	if os.Args[1] == "version" {
+		version()
+		os.Exit(0)
 	}
 	wg.Add(1)
 	go agnt()
