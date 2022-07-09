@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -26,7 +27,6 @@ var (
 	ServerAuthToken          string
 	DefaultChannel           string = "default"
 	PrivateKey               *rsa.PrivateKey
-	lastServer               int
 	Output                   string
 	OutputFormat             string = "json"
 	ClientMessageID          string
@@ -265,16 +265,8 @@ func LoadPrivateKeyFromFile(file string) error {
 	return LoadPrivateKey(fd)
 }
 
-func GetNextAgentServer() string {
-	if lastServer+1 >= len(ServerAddrs) {
-		return ServerAddrs[0]
-	}
-	lastServer = lastServer + 1
-	return ServerAddrs[lastServer]
-}
-
 func GetAgentServer() string {
-	return ServerAddrs[lastServer]
+	return ServerAddrs[rand.Intn(len(ServerAddrs))]
 }
 
 func CreateSignature() (string, string, error) {
