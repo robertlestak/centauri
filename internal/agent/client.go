@@ -105,7 +105,8 @@ func getMessage(channel string, id string, out string) error {
 		}
 		return nil
 	}
-	// if out is a directory and fn is not empty, then write to file with fn
+	// if out is a directory, then write to filename in that directory if message
+	// has a file name, otherwise, write to filename with message id
 	if stat, err := os.Stat(out); err == nil && stat.IsDir() {
 		if fn != "" {
 			if err := ioutil.WriteFile(out+"/"+fn, msg.Data, 0644); err != nil {
@@ -113,12 +114,14 @@ func getMessage(channel string, id string, out string) error {
 				return err
 			}
 		} else {
-			l.Errorf("no filename provided")
-			return errors.New("no filename provided")
+			if err := ioutil.WriteFile(out+"/"+msg.ID, msg.Data, 0644); err != nil {
+				l.Errorf("failed to write to file: %v", err)
+				return err
+			}
 		}
 		return nil
 	} else {
-		// otherwise, write output to file provided
+		// if out is not a directory, then write to out file
 		if err := ioutil.WriteFile(out, msg.Data, 0644); err != nil {
 			l.Errorf("failed to write to file: %v", err)
 			return err
