@@ -1,6 +1,7 @@
 package keys
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -34,6 +35,10 @@ type MessageHeader struct {
 }
 
 func PubKeyID(pubKeyBytes []byte) string {
+	// ensure pubKeyBytes has a trailing \n
+	if !bytes.HasSuffix(pubKeyBytes, []byte{'\n'}) {
+		pubKeyBytes = append(pubKeyBytes, '\n')
+	}
 	h := sha256.Sum256(pubKeyBytes)
 	return fmt.Sprintf("%x", h[:])
 }
