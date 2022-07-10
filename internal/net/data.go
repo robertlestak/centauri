@@ -80,6 +80,9 @@ func readMessage(conn net.Conn) (*DataMessage, error) {
 		}
 	}
 	l.Debugf("Received message: %s", buffer.String())
+	if buffer.String() == "" {
+		return nil, nil
+	}
 	// parse message
 	var dataMsg DataMessage
 	err := json.Unmarshal(buffer.Bytes(), &dataMsg)
@@ -145,26 +148,35 @@ func handleDataConnection(conn net.Conn) {
 		l.Errorf("failed to read message: %v", err)
 		return
 	}
-	l.Debugf("Received message: %v", dataMsg)
-	md, err := persist.GetMessageByID(*dataMsg.PubKeyID, *dataMsg.Channel, *dataMsg.ID)
-	if err != nil {
-		e := err.Error()
-		l.Errorf("failed to get message: %v", err)
-		writeMessage(conn, &DataMessage{
-			Type:  DataMessageResponse,
-			Error: &e,
-		})
+	if dataMsg == nil {
+		l.Debug("No message received")
 		return
 	}
-	l.Debugf("Got message: %v", md)
-	// write message
-	writeMessage(conn, &DataMessage{
-		Type:     DataMessageResponse,
-		ID:       dataMsg.ID,
-		PubKeyID: dataMsg.PubKeyID,
-		Channel:  dataMsg.Channel,
-		Data:     &md,
-	})
+	switch dataMsg.Type {
+	case DataMessageRequest:
+		l.Debugf("Received message: %v", dataMsg)
+		md, err := persist.GetMessageByID(*dataMsg.PubKeyID, *dataMsg.Channel, *dataMsg.ID)
+		if err != nil {
+			e := err.Error()
+			l.Errorf("failed to get message: %v", err)
+			writeMessage(conn, &DataMessage{
+				Type:  DataMessageResponse,
+				Error: &e,
+			})
+			return
+		}
+		l.Debugf("Got message: %v", md)
+		// write message
+		writeMessage(conn, &DataMessage{
+			Type:     DataMessageResponse,
+			ID:       dataMsg.ID,
+			PubKeyID: dataMsg.PubKeyID,
+			Channel:  dataMsg.Channel,
+			Data:     &md,
+		})
+	default:
+		l.Errorf("Unknown message type: %v", dataMsg.Type)
+	}
 }
 
 func DataServer(port int) {

@@ -291,6 +291,10 @@ func CreateSignature() (string, string, error) {
 		return "", "", err
 	}
 	l.Debugf("timestamp: %s", string(jd))
+	if PrivateKey == nil {
+		l.Error("no private key")
+		return "", "", errors.New("no private key")
+	}
 	sig, err := sign.Sign(jd, PrivateKey)
 	if err != nil {
 		l.Errorf("error creating signature: %v", err)
@@ -381,6 +385,10 @@ func GetMessage(channel, id string) (*message.Message, error) {
 		"ch":  channel,
 	})
 	l.Debug("getting message")
+	if channel == "" || id == "" {
+		l.Error("missing channel or id")
+		return nil, errors.New("missing channel or id")
+	}
 	saddr := GetAgentServer()
 	c := &http.Client{}
 	sig, keyID, err := CreateSignature()

@@ -41,25 +41,35 @@ func (d *delegate) NodeMeta(limit int) []byte {
 	return []byte{}
 }
 
-func (d *delegate) NotifyMsg(b []byte) {
-	if len(b) == 0 {
-		return
-	}
+func handleReceiveMessageData(b []byte) {
+	l := log.WithFields(log.Fields{
+		"module": "net",
+		"method": "handleReceiveMessageData",
+	})
+	l.Debugf("received message: %s", string(b))
 	var msg BroadcastMessage
 	if err := json.Unmarshal(b, &msg); err != nil {
-		log.Errorf("error unmarshalling message: %s", err)
+		l.Errorf("error unmarshalling message: %s", err)
 		return
 	}
 	if checkMessageHandled(msg.Type, msg.PubKeyID, msg.Channel, msg.ID) {
 		return
 	}
-	log.Printf("Received message: %s\n", string(b))
+	l.Debugf("message not handled: %s", string(b))
 	if NotifyMessageEventHandler != nil {
 		if err := NotifyMessageEventHandler(b); err != nil {
-			log.Errorf("error handling message: %s", err)
+			l.Errorf("error handling message: %s", err)
 		}
 	}
 	storeNewMessage(msg.Type, msg.PubKeyID, msg.Channel, msg.ID)
+	l.Debugf("message handled: %s", string(b))
+}
+
+func (d *delegate) NotifyMsg(b []byte) {
+	if len(b) == 0 {
+		return
+	}
+	handleReceiveMessageData(b)
 }
 
 func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte {
@@ -230,7 +240,7 @@ func BroadcastNewMessage(pubKeyID string, channel string, id string) error {
 		l.Errorf("failed to marshal message: %v", err)
 		return err
 	}
-	Broadcast(b)
+	go Broadcast(b)
 	l.Debug("broadcasted message")
 	return nil
 }
