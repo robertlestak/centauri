@@ -9,8 +9,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/robertlestak/centauri/internal/keys"
-	"github.com/robertlestak/centauri/internal/sign"
 	"github.com/robertlestak/centauri/pkg/message"
+	"github.com/robertlestak/centauri/pkg/sign"
 	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 )
