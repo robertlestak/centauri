@@ -32,6 +32,7 @@ type PeerConfig struct {
 	AdvertiseAddr       string   `yaml:"advertiseAddr"`
 	AllowedCidrs        []string `yaml:"allowedCidrs"`
 	ServerPort          int      `yaml:"serverPort"`
+	ServerCors          []string `yaml:"serverCors"`
 	ServerTLSCertPath   string   `yaml:"serverTLSCertPath"`
 	ServerTLSKeyPath    string   `yaml:"serverTLSKeyPath"`
 	PeerAddrs           []string `yaml:"peerAddrs"`

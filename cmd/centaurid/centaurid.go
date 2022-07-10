@@ -29,6 +29,7 @@ var (
 	flagPeerAdvertiseAddr       *string
 	flagPeerAllowedCidrs        *string
 	flagServerPort              *int
+	flagServerCors              *string
 	flagServerTLSCertPath       *string
 	flagServerTLSKeyPath        *string
 	flagPeerAddrs               *string
@@ -102,6 +103,14 @@ func loadcfg() {
 	}
 	if *flagServerAuthToken != "" {
 		cfg.Config.Peer.ServerAuthToken = *flagServerAuthToken
+	}
+	if *flagServerCors != "" {
+		for _, cors := range strings.Split(*flagServerCors, ",") {
+			if strings.TrimSpace(cors) == "" {
+				continue
+			}
+			cfg.Config.Peer.ServerCors = append(cfg.Config.Peer.ServerCors, cors)
+		}
 	}
 	if *flagPeerAddrs != "" {
 		addrSpl := strings.Split(*flagPeerAddrs, ",")
@@ -186,6 +195,7 @@ func serv() {
 	if err := server.Server(
 		cfg.Config.Peer.ServerPort,
 		cfg.Config.Peer.ServerAuthToken,
+		cfg.Config.Peer.ServerCors,
 		cfg.Config.Peer.ServerTLSCertPath,
 		cfg.Config.Peer.ServerTLSKeyPath,
 	); err != nil {
@@ -211,6 +221,7 @@ func main() {
 	flagPeerConnectionMode = flagPeer.String("mode", "lan", "peer connection mode (lan, wan, local)")
 	flagServerAuthToken = flagPeer.String("server-token", "", "auth token for server")
 	flagServerPort = flagPeer.Int("server-port", 5666, "port to use for server")
+	flagServerCors = flagPeer.String("server-cors", "*", "comma separated cors for server")
 	flagServerTLSCertPath = flagPeer.String("server-cert", "", "path to server TLS cert")
 	flagServerTLSKeyPath = flagPeer.String("server-key", "", "path to server TLS key")
 	flagPeerName = flagPeer.String("name", "", "name of this node")

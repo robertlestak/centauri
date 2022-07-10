@@ -11,6 +11,7 @@ import (
 	"github.com/robertlestak/centauri/internal/keys"
 	"github.com/robertlestak/centauri/internal/sign"
 	"github.com/robertlestak/centauri/pkg/message"
+	"github.com/rs/cors"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -166,7 +167,7 @@ func handleHealthcheck(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("OK"))
 }
 
-func Server(port int, authToken string, tlsCrtPath string, tlsKeyPath string) error {
+func Server(port int, authToken string, corsList []string, tlsCrtPath string, tlsKeyPath string) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "server",
 		"fn":  "Server",
@@ -191,11 +192,22 @@ func Server(port int, authToken string, tlsCrtPath string, tlsKeyPath string) er
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
 	r.HandleFunc("/statusz", handleHealthcheck).Methods("GET")
 	sPort := fmt.Sprintf(":%d", port)
+	if len(corsList) == 0 {
+		corsList = []string{"*"}
+	}
+	c := cors.New(cors.Options{
+		AllowedOrigins:   corsList,
+		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "LIST"},
+		AllowedHeaders:   []string{"X-Token", "X-Signature", "Content-Type"},
+		AllowCredentials: true,
+		Debug:            false,
+	})
+	h := c.Handler(r)
 	if tlsCrtPath != "" && tlsKeyPath != "" {
 		l.Debug("starting server with TLS")
-		return http.ListenAndServeTLS(sPort, tlsCrtPath, tlsKeyPath, r)
+		return http.ListenAndServeTLS(sPort, tlsCrtPath, tlsKeyPath, h)
 	} else {
 		l.Debug("starting server without TLS")
-		return http.ListenAndServe(sPort, r)
+		return http.ListenAndServe(sPort, h)
 	}
 }
