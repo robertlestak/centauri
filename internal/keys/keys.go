@@ -63,7 +63,11 @@ func BytesToPrivKey(privateKey []byte) (*rsa.PrivateKey, error) {
 	}
 	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, err
+		p, e := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if e != nil {
+			return nil, err
+		}
+		priv = p.(*rsa.PrivateKey)
 	}
 	return priv, nil
 }
