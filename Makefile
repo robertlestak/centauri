@@ -1,4 +1,3 @@
-
 VERSION=v0.0.1
 
 binaries: centaurid cent centauri-agent

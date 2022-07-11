@@ -199,8 +199,11 @@ func RsaDecrypt(privateKey []byte, ciphertext []byte) ([]byte, error) {
 	}
 	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {
-		l.Error("error parsing private key")
-		return nil, err
+		p, e := x509.ParsePKCS8PrivateKey(block.Bytes)
+		if e != nil {
+			return nil, err
+		}
+		priv = p.(*rsa.PrivateKey)
 	}
 	return rsa.DecryptOAEP(sha1.New(), rand.Reader, priv, ciphertext, nil)
 }
