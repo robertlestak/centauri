@@ -309,15 +309,10 @@ func SendMessageThroughPeer(msg *message.Message) error {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusAccepted {
 		l.Errorf("error confirming message receive: %v", resp.StatusCode)
 		return err
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&msg); err != nil {
-		l.Errorf("error decoding response: %v", err)
-		return err
-	}
-	l.Debugf("message sent: %v", msg.ID)
 	return nil
 }
 

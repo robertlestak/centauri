@@ -171,6 +171,10 @@ func consumeNextMessage(channel string, out string) error {
 		l.Errorf("error getting next message: %v", err)
 		return err
 	}
+	if id == "" {
+		l.Debug("no next message")
+		return nil
+	}
 	// delete message
 	err = ConfirmMessageReceive(channel, id)
 	if err != nil {

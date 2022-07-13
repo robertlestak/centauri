@@ -27,17 +27,13 @@ func HandleCreateMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	m, err := mr.Create()
+	_, err := mr.Create()
 	if err != nil {
 		l.Errorf("error creating message: %v", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := json.NewEncoder(w).Encode(m); err != nil {
-		l.Errorf("error encoding message: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func HandleListMesageMetaForPublicKey(w http.ResponseWriter, r *http.Request) {
