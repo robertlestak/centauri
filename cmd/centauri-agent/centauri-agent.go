@@ -102,13 +102,15 @@ func main() {
 	flagServerAuthToken = flagAgent.String("server-token", "", "auth token for server")
 	flagUpstreamServerAddrs = flagAgent.String("server-addrs", "", "addresses to join as an agent")
 	flagDataDir = flagAgent.String("data", "", "data directory")
-	if err := flagAgent.Parse(os.Args[1:]); err != nil {
-		l.Errorf("failed to parse flags: %v", err)
-		os.Exit(1)
-	}
-	if os.Args[1] == "version" {
-		version()
-		os.Exit(0)
+	if len(os.Args) > 1 {
+		if err := flagAgent.Parse(os.Args[1:]); err != nil {
+			l.Errorf("failed to parse flags: %v", err)
+			os.Exit(1)
+		}
+		if os.Args[1] == "version" {
+			version()
+			os.Exit(0)
+		}
 	}
 	wg.Add(1)
 	go agnt()

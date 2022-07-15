@@ -149,6 +149,15 @@ func ListMembers() []*memberlist.Node {
 	return List.Members()
 }
 
+func PeerInList(peerName string) bool {
+	for _, member := range List.Members() {
+		if member.Name == peerName {
+			return true
+		}
+	}
+	return false
+}
+
 func NodeAddr() string {
 	return List.LocalNode().Addr.String()
 }

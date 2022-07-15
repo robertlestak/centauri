@@ -226,13 +226,15 @@ func main() {
 	flagServerTLSKeyPath = flagPeer.String("server-key", "", "path to server TLS key")
 	flagPeerName = flagPeer.String("name", "", "name of this node")
 	flagDataDir = flagPeer.String("data", "", "data directory")
-	if err := flagPeer.Parse(os.Args[1:]); err != nil {
-		l.Errorf("failed to parse flags: %v", err)
-		os.Exit(1)
-	}
-	if os.Args[1] == "version" {
-		version()
-		os.Exit(0)
+	if len(os.Args) > 1 {
+		if err := flagPeer.Parse(os.Args[1:]); err != nil {
+			l.Errorf("failed to parse flags: %v", err)
+			os.Exit(1)
+		}
+		if os.Args[1] == "version" {
+			version()
+			os.Exit(0)
+		}
 	}
 	wg.Add(1)
 	loadcfg()

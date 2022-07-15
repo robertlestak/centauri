@@ -22,6 +22,7 @@ var (
 
 type DataMessage struct {
 	Type     DataMessageType `json:"type"`
+	PeerName *string         `json:"peer_name"`
 	PeerAddr *string         `json:"peerAddr,omitempty"`
 	PeerPort *int            `json:"peerPort,omitempty"`
 	PubKeyID *string         `json:"pubKeyID,omitempty"`
@@ -110,6 +111,7 @@ func RequestDataFromPeer(peerAddr string, peerPort int, pubKeyID string, channel
 	// write message
 	err = writeMessage(conn, &DataMessage{
 		Type:     DataMessageRequest,
+		PeerName: &PeerName,
 		PubKeyID: &pubKeyID,
 		Channel:  &channel,
 		ID:       &id,
@@ -152,6 +154,15 @@ func handleDataConnection(conn net.Conn) {
 		l.Debug("No message received")
 		return
 	}
+	if !PeerInList(*dataMsg.PeerName) {
+		l.Debug("Peer not in list")
+		err := "Peer not in list"
+		writeMessage(conn, &DataMessage{
+			Type:  DataMessageResponse,
+			Error: &err,
+		})
+		return
+	}
 	switch dataMsg.Type {
 	case DataMessageRequest:
 		l.Debugf("Received message: %v", dataMsg)
@@ -160,8 +171,9 @@ func handleDataConnection(conn net.Conn) {
 			e := err.Error()
 			l.Errorf("failed to get message: %v", err)
 			writeMessage(conn, &DataMessage{
-				Type:  DataMessageResponse,
-				Error: &e,
+				Type:     DataMessageResponse,
+				PeerName: &PeerName,
+				Error:    &e,
 			})
 			return
 		}
@@ -169,6 +181,7 @@ func handleDataConnection(conn net.Conn) {
 		// write message
 		writeMessage(conn, &DataMessage{
 			Type:     DataMessageResponse,
+			PeerName: &PeerName,
 			ID:       dataMsg.ID,
 			PubKeyID: dataMsg.PubKeyID,
 			Channel:  dataMsg.Channel,
