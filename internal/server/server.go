@@ -183,7 +183,7 @@ func Server(port int, authToken string, corsList []string, tlsCrtPath string, tl
 	}
 
 	r.HandleFunc("/message", HandleCreateMessage).Methods("POST")
-	r.HandleFunc("/messages", HandleListMesageMetaForPublicKey).Methods("LIST")
+	r.HandleFunc("/messages", HandleListMesageMetaForPublicKey).Methods("GET")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleGetMessageByID).Methods("GET")
 	r.HandleFunc("/message/{keyID}/{channel}/{id}", HandleDeleteMessageByID).Methods("DELETE")
 	r.HandleFunc("/statusz", handleHealthcheck).Methods("GET")
@@ -193,7 +193,7 @@ func Server(port int, authToken string, corsList []string, tlsCrtPath string, tl
 	}
 	c := cors.New(cors.Options{
 		AllowedOrigins:   corsList,
-		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "LIST"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT"},
 		AllowedHeaders:   []string{"X-Token", "X-Signature", "Content-Type"},
 		AllowCredentials: true,
 		Debug:            false,

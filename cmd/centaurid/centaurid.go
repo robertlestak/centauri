@@ -76,6 +76,9 @@ func loadcfg() {
 	if *flagPeerGossipAdvertisePort != 0 {
 		cfg.Config.Peer.GossipAdvertisePort = *flagPeerGossipAdvertisePort
 	}
+	if cfg.Config.Peer.GossipAdvertisePort == 0 {
+		cfg.Config.Peer.GossipAdvertisePort = cfg.Config.Peer.GossipBindPort
+	}
 	if *flagPeerAdvertiseAddr != "" {
 		cfg.Config.Peer.AdvertiseAddr = *flagPeerAdvertiseAddr
 	}
@@ -84,6 +87,9 @@ func loadcfg() {
 	}
 	if *flagPeerDataAdvertisePort != 0 {
 		cfg.Config.Peer.DataAdvertisePort = *flagPeerDataAdvertisePort
+	}
+	if cfg.Config.Peer.DataAdvertisePort == 0 {
+		cfg.Config.Peer.DataAdvertisePort = cfg.Config.Peer.DataBindPort
 	}
 	if *flagPeerAllowedCidrs != "" {
 		cidrSpl := strings.Split(*flagPeerAllowedCidrs, ",")
@@ -163,6 +169,12 @@ func peer() {
 		}
 		net.PeerKey = bd
 	}
+	if cfg.Config.Peer.DataAdvertisePort == 0 {
+		cfg.Config.Peer.DataAdvertisePort = cfg.Config.Peer.DataBindPort
+	}
+	net.PeerName = cfg.Config.Peer.Name
+	net.PeerAddr = cfg.Config.Peer.AdvertiseAddr
+	net.PeerDataPort = cfg.Config.Peer.DataAdvertisePort
 	err = net.Create(
 		cfg.Config.Peer.Name,
 		cfg.Config.Peer.AdvertiseAddr,
@@ -182,20 +194,24 @@ func peer() {
 			os.Exit(1)
 		}
 	}
-	if cfg.Config.Peer.DataAdvertisePort == 0 {
-		cfg.Config.Peer.DataAdvertisePort = cfg.Config.Peer.DataBindPort
-	}
-	net.PeerName = cfg.Config.Peer.Name
-	net.PeerAddr = cfg.Config.Peer.AdvertiseAddr
-	net.PeerDataPort = cfg.Config.Peer.DataAdvertisePort
 	net.CreateQueue()
 	go net.DataServer(cfg.Config.Peer.DataBindPort)
 	go net.CacheCleaner()
 	go persist.TimeoutCleaner()
+	// DeletionHandlers are called when a file is deleted on this peer
+	// these will notify other peers to delete the file locally
 	events.DeletionHandlers = append(events.DeletionHandlers, net.BroadcastDeleteMessage)
+	// NewMessageHandlers are called when a new message is sent to this peer
+	// these will notify other peers to retrieve the message and store it locally
 	events.NewMessageHandlers = append(events.NewMessageHandlers, net.BroadcastNewMessage)
+	// ReceivedDeletionHandlers are called when a file is deleted on another peer
+	// these will notify this peer to delete the file locally
 	events.ReceivedDeletionHandlers = append(events.ReceivedDeletionHandlers, message.DeleteMessageByID)
+	// ReceivedMessageHandlers are called when a new message is received from another peer
+	// these will notify this peer to retrieve the message from the other peer and store it locally
 	events.ReceivedMessageHandlers = append(events.ReceivedMessageHandlers, message.GetMessageFromPeer)
+	// NotifyMessageEventHandler is called when a new message is received from another peer
+	// this will inspect the message and call the appropriate event handler
 	net.NotifyMessageEventHandler = events.ReceiveMessage
 }
 

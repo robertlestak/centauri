@@ -149,7 +149,7 @@ func GetMessageFromPeer(pubKeyID string, channel string, id string, peerAddr str
 		"peerPort": peerPort,
 	})
 	l.Debugf("getting message from peer %s:%d", peerAddr, peerPort)
-	md, err := net.RequestDataFromPeer(peerAddr, peerPort, pubKeyID, channel, id)
+	md, err := net.RequestDataFromPeerBestEffort(peerAddr, peerPort, pubKeyID, channel, id)
 	if err != nil {
 		l.Errorf("error getting message: %v", err)
 		return err

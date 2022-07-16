@@ -2,6 +2,9 @@ package net
 
 import (
 	"encoding/json"
+	"errors"
+	"math/rand"
+	"net"
 	network "net"
 	"strings"
 	"sync"
@@ -16,6 +19,7 @@ var (
 	PeerAddr                  string
 	PeerKey                   []byte
 	PeerDataPort              int
+	Meta                      []byte
 	NotifyMessageEventHandler func(data []byte) error
 	mtx                       sync.RWMutex
 	List                      *memberlist.Memberlist
@@ -33,14 +37,67 @@ type BroadcastMessage struct {
 }
 
 type broadcast struct {
-	msg    []byte
-	notify chan<- struct{}
+	msgType  string
+	pubKeyID string
+	channel  string
+	msgID    string
+	msg      []byte
+	notify   chan<- struct{}
 }
 
 type delegate struct{}
 
+type NodeMeta struct {
+	PeerAddr string `json:"peerAddr"`
+	PeerPort int    `json:"peerPort"`
+}
+
+func GetLocalIP() string {
+	addrs, err := network.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
+}
+
+func createMeta() []byte {
+	meta := &NodeMeta{}
+	meta.PeerAddr = PeerAddr
+	if meta.PeerAddr == "" {
+		// get local address
+		addr := GetLocalIP()
+		if addr != "" {
+			meta.PeerAddr = addr
+		}
+	}
+	meta.PeerPort = PeerDataPort
+	var err error
+	Meta, err = json.Marshal(&meta)
+	if err != nil {
+		log.Errorf("failed to marshal meta: %v", err)
+	}
+	return Meta
+}
+
 func (d *delegate) NodeMeta(limit int) []byte {
-	return []byte{}
+	return Meta
+}
+
+func GetRandomPeer() (*memberlist.Node, error) {
+	llen := len(List.Members())
+	if llen == 0 {
+		return nil, errors.New("no peers")
+	}
+	idx := rand.Intn(llen)
+	return List.Members()[idx], nil
 }
 
 func handleReceiveMessageData(b []byte) {
@@ -68,10 +125,17 @@ func handleReceiveMessageData(b []byte) {
 }
 
 func (d *delegate) NotifyMsg(b []byte) {
+	l := log.WithFields(log.Fields{
+		"module": "net",
+		"method": "NotifyMsg",
+	})
+	cp := make([]byte, len(b))
+	copy(cp, b)
+	l.Debugf("received message: %s", string(cp))
 	if len(b) == 0 {
 		return
 	}
-	handleReceiveMessageData(b)
+	go handleReceiveMessageData(cp)
 }
 
 func (d *delegate) GetBroadcasts(overhead, limit int) [][]byte {
@@ -131,6 +195,28 @@ func (ed *eventDelegate) NotifyUpdate(node *memberlist.Node) {
 }
 
 func (b *broadcast) Invalidates(other memberlist.Broadcast) bool {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "Invalidates",
+	})
+	l.Debugf("checking if broadcast invalidates: %s", other)
+	ob := other.(*broadcast)
+	if b.pubKeyID != ob.pubKeyID {
+		return false
+	}
+	if b.channel != ob.channel {
+		return false
+	}
+	if b.msgID != ob.msgID {
+		return false
+	}
+	if b.msgType == ob.msgType {
+		return false
+	}
+	if b.msgType == "deleteMessage" && ob.msgType == "newMessage" {
+		return true
+	}
+	l.Debugf("broadcast invalidates: %s", other)
 	return false
 }
 
@@ -223,6 +309,7 @@ func Create(nodeName string, addr string, advPort int, bindPort int, connMode st
 	cfg.Name = nodeName
 	cfg.Events = &eventDelegate{}
 	cfg.Delegate = &delegate{}
+	createMeta()
 	list, err := memberlist.Create(cfg)
 	if err != nil {
 		l.Errorf("failed to create memberlist: %v", err)
@@ -257,11 +344,8 @@ func CreateQueue() {
 	}
 }
 
-func Broadcast(msg []byte) {
-	Queue.QueueBroadcast(&broadcast{
-		msg:    msg,
-		notify: nil,
-	})
+func Broadcast(b *broadcast) {
+	Queue.QueueBroadcast(b)
 }
 
 func BroadcastNewMessage(pubKeyID string, channel string, id string) error {
@@ -283,7 +367,15 @@ func BroadcastNewMessage(pubKeyID string, channel string, id string) error {
 		l.Errorf("failed to marshal message: %v", err)
 		return err
 	}
-	go Broadcast(b)
+	bm := &broadcast{
+		msgType:  "newMessage",
+		pubKeyID: pubKeyID,
+		channel:  channel,
+		msgID:    id,
+		msg:      b,
+		notify:   nil,
+	}
+	go Broadcast(bm)
 	l.Debug("broadcasted message")
 	return nil
 }
@@ -305,7 +397,15 @@ func BroadcastDeleteMessage(pubKeyID string, channel string, id string) error {
 		l.Errorf("failed to marshal message: %v", err)
 		return err
 	}
-	Broadcast(b)
+	bm := &broadcast{
+		msgType:  "deleteMessage",
+		pubKeyID: pubKeyID,
+		channel:  channel,
+		msgID:    id,
+		msg:      b,
+		notify:   nil,
+	}
+	go Broadcast(bm)
 	l.Debug("broadcasted message")
 	return nil
 }

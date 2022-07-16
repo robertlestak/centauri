@@ -21,6 +21,7 @@ var (
 	DataMessageRequest  = DataMessageType("request")
 	DataMessageResponse = DataMessageType("response")
 	ErrorMissingFields  = "missing fields"
+	SearchingPeerData   = make(map[*DataMessage][]*NodeMeta)
 )
 
 type DataMessage struct {
@@ -170,6 +171,43 @@ func readMessage(conn net.Conn) (*DataMessage, error) {
 		return nil, err
 	}
 	return &dataMsg, nil
+}
+
+func RequestDataFromPeerBestEffort(peerAddr string, peerPort int, pubKeyID string, channel string, id string) ([]byte, error) {
+	l := log.WithFields(log.Fields{
+		"module": "net",
+		"method": "RequestDataFromPeerBestEffort",
+	})
+	l.Debug("Requesting data from peer")
+	d, err := RequestDataFromPeer(peerAddr, peerPort, pubKeyID, channel, id)
+	if err != nil {
+		l.Errorf("failed to request data from original peer: %v", err)
+		// we were unable to get the data from the original peer, let's try from our other peers
+		checkLimit := 10
+		for i, p := range ListMembers() {
+			if i >= checkLimit {
+				return nil, errors.New("failed to get data from any peer")
+			}
+			nm := &NodeMeta{}
+			if err := json.Unmarshal(p.Meta, nm); err != nil {
+				l.Errorf("failed to unmarshal meta: %v", err)
+				continue
+			}
+			if nm.PeerAddr == peerAddr && nm.PeerPort == peerPort {
+				continue
+			}
+			if nm.PeerAddr == PeerAddr && nm.PeerPort == PeerDataPort {
+				continue
+			}
+			d, err := RequestDataFromPeer(nm.PeerAddr, nm.PeerPort, pubKeyID, channel, id)
+			if err != nil {
+				l.Errorf("failed to request data from peer: %v", err)
+				continue
+			}
+			return d, nil
+		}
+	}
+	return d, nil
 }
 
 func RequestDataFromPeer(peerAddr string, peerPort int, pubKeyID string, channel string, id string) ([]byte, error) {

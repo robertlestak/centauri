@@ -343,7 +343,7 @@ func CheckPendingMessages(channel string) ([]MessageMeta, error) {
 	if channel != "" {
 		addr = addr + "?channel=" + channel
 	}
-	req, err := http.NewRequest("LIST", addr, nil)
+	req, err := http.NewRequest("GET", addr, nil)
 	if err != nil {
 		l.Errorf("error creating request: %v", err)
 		return msgs, err
