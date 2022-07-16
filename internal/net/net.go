@@ -3,6 +3,7 @@ package net
 import (
 	"encoding/json"
 	network "net"
+	"strings"
 	"sync"
 	"time"
 
@@ -169,6 +170,30 @@ func AdvertiseAddr() string {
 	return NodeAddr()
 }
 
+// resolveAddr will check if the given address is an IP
+// if so, it will return as is. If input is not an IP,
+// it will do a DNS lookup and return the first IP.
+func resolveAddr(addr string) (string, error) {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return "", nil
+	}
+	// check if it's an IP
+	ip := network.ParseIP(addr)
+	if ip == nil {
+		// not an IP, do a DNS lookup
+		ips, err := network.LookupIP(addr)
+		if err != nil {
+			return "", err
+		}
+		if len(ips) == 0 {
+			return "", nil
+		}
+		addr = ips[0].String()
+	}
+	return addr, nil
+}
+
 func Create(nodeName string, addr string, advPort int, bindPort int, connMode string, cidrsAllowed []network.IPNet) error {
 	l := log.WithFields(log.Fields{
 		"pkg": "net",
@@ -185,7 +210,12 @@ func Create(nodeName string, addr string, advPort int, bindPort int, connMode st
 	cfg.CIDRsAllowed = cidrsAllowed
 	cfg.BindPort = bindPort
 	cfg.AdvertisePort = advPort
-	cfg.AdvertiseAddr = addr
+	raddr, err := resolveAddr(addr)
+	if err != nil {
+		l.Errorf("error resolving address: %s", err)
+		return err
+	}
+	cfg.AdvertiseAddr = raddr
 	cfg.Name = nodeName
 	cfg.Events = &eventDelegate{}
 	cfg.Delegate = &delegate{}
