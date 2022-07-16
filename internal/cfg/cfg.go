@@ -27,6 +27,7 @@ type PeerConfig struct {
 	ConnectionMode      string   `yaml:"connectionMode"`
 	GossipBindPort      int      `yaml:"gossipBindPort"`
 	GossipAdvertisePort int      `yaml:"gossipAdvertisePort"`
+	PeerKey             string   `yaml:"peerKey"`
 	DataBindPort        int      `yaml:"dataBindPort"`
 	DataAdvertisePort   int      `yaml:"dataAdvertisePort"`
 	AdvertiseAddr       string   `yaml:"advertiseAddr"`

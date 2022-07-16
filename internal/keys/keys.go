@@ -216,6 +216,42 @@ func GenerateNewAESKey() ([]byte, error) {
 	return key, nil
 }
 
+func AESEncrypt(data, secret []byte) (string, error) {
+	block, err := aes.NewCipher(secret)
+	if err != nil {
+		return "", err
+	}
+	ciphertext := make([]byte, aes.BlockSize+len(data))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
+		return "", fmt.Errorf("could not encrypt: %v", err)
+	}
+
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], data)
+	hd := hex.EncodeToString(ciphertext)
+	return hd, nil
+}
+
+func AESDecrypt(data string, secret []byte) ([]byte, error) {
+	ciphertext, err := hex.DecodeString(data)
+	if err != nil {
+		return nil, err
+	}
+	block, err := aes.NewCipher(secret)
+	if err != nil {
+		return nil, err
+	}
+	if len(ciphertext) < aes.BlockSize {
+		return nil, errors.New("ciphertext too short")
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
+	stream := cipher.NewCFBDecrypter(block, iv)
+	stream.XORKeyStream(ciphertext, ciphertext)
+	return ciphertext, nil
+}
+
 // AesGcmEncrypt takes an encryption key and a plaintext string and encrypts it with AES256 in GCM mode, which provides authenticated encryption. Returns the ciphertext and the used nonce.
 func AesGcmEncrypt(key []byte, raw []byte) ([]byte, []byte, error) {
 	block, err := aes.NewCipher(key)

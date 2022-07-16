@@ -14,6 +14,7 @@ import (
 var (
 	PeerName                  string
 	PeerAddr                  string
+	PeerKey                   []byte
 	PeerDataPort              int
 	NotifyMessageEventHandler func(data []byte) error
 	mtx                       sync.RWMutex
@@ -206,6 +207,9 @@ func Create(nodeName string, addr string, advPort int, bindPort int, connMode st
 		cfg = memberlist.DefaultLANConfig()
 	} else {
 		cfg = memberlist.DefaultLocalConfig()
+	}
+	if len(PeerKey) > 0 {
+		cfg.SecretKey = PeerKey
 	}
 	cfg.CIDRsAllowed = cidrsAllowed
 	cfg.BindPort = bindPort

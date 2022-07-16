@@ -4,10 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
+	"time"
 
+	"github.com/robertlestak/centauri/internal/keys"
 	"github.com/robertlestak/centauri/internal/persist"
 	log "github.com/sirupsen/logrus"
 )
@@ -27,9 +30,75 @@ type DataMessage struct {
 	PeerPort *int            `json:"peerPort,omitempty"`
 	PubKeyID *string         `json:"pubKeyID,omitempty"`
 	Channel  *string         `json:"channel,omitempty"`
+	Sig      *string         `json:"sig,omitempty"`
 	ID       *string         `json:"id,omitempty"`
 	Data     *[]byte         `json:"data,omitempty"`
 	Error    *string         `json:"error,omitempty"`
+}
+
+func (m *DataMessage) createSig() error {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "DataMessage.createSig",
+	})
+	l.Debug("Creating signature")
+	if len(PeerKey) == 0 {
+		l.Error("Peer token is nil")
+		return nil
+	}
+	var sm struct {
+		Time int64 `json:"time"`
+	}
+	sm.Time = time.Now().Unix()
+	data, err := json.Marshal(sm)
+	if err != nil {
+		l.Errorf("failed to marshal message: %v", err)
+		return err
+	}
+	l.Debugf("Marshalled message: %s", string(data))
+	// encrypt message with PeerKey
+	enc, err := keys.AESEncrypt(data, PeerKey)
+	if err != nil {
+		l.Errorf("failed to encrypt message: %v", err)
+		return err
+	}
+	l.Debugf("Encrypted message: %s", enc)
+	m.Sig = &enc
+	return nil
+}
+
+func (m *DataMessage) validateSig() error {
+	l := log.WithFields(log.Fields{
+		"pkg": "net",
+		"fn":  "DataMessage.validateSig",
+	})
+	l.Debug("Validating signature")
+	if len(PeerKey) == 0 {
+		l.Error("Peer token is nil")
+		return nil
+	}
+	if m.Sig == nil {
+		l.Error("Signature is nil")
+		return errors.New("signature is nil")
+	}
+	// decrypt message with PeerKey
+	dec, err := keys.AESDecrypt(*m.Sig, PeerKey)
+	if err != nil {
+		l.Errorf("failed to decrypt message: %v", err)
+		return err
+	}
+	l.Debugf("Decrypted message: %s", dec)
+	// unmarshal message
+	var sm struct {
+		Time int64 `json:"time"`
+	}
+	err = json.Unmarshal(dec, &sm)
+	if err != nil {
+		l.Errorf("failed to unmarshal message: %v", err)
+		return err
+	}
+	l.Debugf("Unmarshalled message: %v", sm)
+	return nil
 }
 
 func writeMessage(conn net.Conn, m *DataMessage) error {
@@ -38,6 +107,10 @@ func writeMessage(conn net.Conn, m *DataMessage) error {
 		"method": "writeMessage",
 	})
 	l.Debug("Writing message")
+	if err := m.createSig(); err != nil {
+		l.Errorf("failed to create signature: %v", err)
+		return err
+	}
 	// marshal message
 	msg, err := json.Marshal(m)
 	if err != nil {
@@ -92,6 +165,10 @@ func readMessage(conn net.Conn) (*DataMessage, error) {
 		return nil, err
 	}
 	l.Debugf("Parsed message: %v", dataMsg)
+	if err := dataMsg.validateSig(); err != nil {
+		l.Errorf("failed to validate signature: %v", err)
+		return nil, err
+	}
 	return &dataMsg, nil
 }
 
@@ -125,6 +202,10 @@ func RequestDataFromPeer(peerAddr string, peerPort int, pubKeyID string, channel
 	if err != nil {
 		l.Errorf("failed to read message: %v", err)
 		return nil, err
+	}
+	if dataMsg == nil {
+		l.Error("no data message received")
+		return nil, errors.New("no data message received")
 	}
 	// handle message
 	if dataMsg.Error != nil {

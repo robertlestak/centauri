@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	network "net"
@@ -36,6 +37,7 @@ var (
 	flagPeerName                *string
 	flagDataDir                 *string
 	flagServerAuthToken         *string
+	flagPeerKey                 *string
 )
 
 func init() {
@@ -104,6 +106,9 @@ func loadcfg() {
 	if *flagServerAuthToken != "" {
 		cfg.Config.Peer.ServerAuthToken = *flagServerAuthToken
 	}
+	if *flagPeerKey != "" {
+		cfg.Config.Peer.PeerKey = *flagPeerKey
+	}
 	if *flagServerCors != "" {
 		for _, cors := range strings.Split(*flagServerCors, ",") {
 			if strings.TrimSpace(cors) == "" {
@@ -150,6 +155,14 @@ func peer() {
 		cidrs = nil
 	}
 	var err error
+	if cfg.Config.Peer.PeerKey != "" {
+		bd, err := hex.DecodeString(cfg.Config.Peer.PeerKey)
+		if err != nil {
+			l.Errorf("failed to decode secret key: %v", err)
+			os.Exit(1)
+		}
+		net.PeerKey = bd
+	}
 	err = net.Create(
 		cfg.Config.Peer.Name,
 		cfg.Config.Peer.AdvertiseAddr,
@@ -216,6 +229,7 @@ func main() {
 	flagPeerGossipBindPort = flagPeer.Int("gossip-bind-port", 5665, "peer port to bind")
 	flagPeerGossipAdvertisePort = flagPeer.Int("gossip-advertise-port", 5665, "peer port to advertise")
 	flagPeerAdvertiseAddr = flagPeer.String("advertise-addr", "", "peer address to advertise")
+	flagPeerKey = flagPeer.String("peer-key", "", "peer encryption key. leave blank for no encryption")
 	flagPeerAddrs = flagPeer.String("addrs", "", "addresses to join")
 	flagPeerAllowedCidrs = flagPeer.String("cidrs", "", "cidrs to allow. comma separated. empty for all")
 	flagPeerConnectionMode = flagPeer.String("mode", "lan", "peer connection mode (lan, wan, local)")
