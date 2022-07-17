@@ -44,7 +44,7 @@ func (m *DataMessage) createSig() error {
 	})
 	l.Debug("Creating signature")
 	if len(PeerKey) == 0 {
-		l.Error("Peer token is nil")
+		l.Debugf("Peer token is nil")
 		return nil
 	}
 	var sm struct {
@@ -75,7 +75,7 @@ func (m *DataMessage) validateSig() error {
 	})
 	l.Debug("Validating signature")
 	if len(PeerKey) == 0 {
-		l.Error("Peer token is nil")
+		l.Debugf("Peer token is nil")
 		return nil
 	}
 	if m.Sig == nil {
