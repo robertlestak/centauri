@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robertlestak/centauri/internal/keys"
 	"github.com/robertlestak/centauri/internal/persist"
+	"github.com/robertlestak/centauri/pkg/keys"
 	"github.com/robertlestak/centauri/pkg/message"
 	"github.com/robertlestak/centauri/pkg/sign"
 	log "github.com/sirupsen/logrus"

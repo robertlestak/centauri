@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/robertlestak/centauri/internal/keys"
+	"github.com/robertlestak/centauri/pkg/keys"
 	"github.com/robertlestak/centauri/pkg/message"
 	"github.com/robertlestak/centauri/pkg/sign"
 	"github.com/rs/cors"

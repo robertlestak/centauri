@@ -9,7 +9,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/robertlestak/centauri/internal/keys"
+	"github.com/robertlestak/centauri/pkg/keys"
 )
 
 type SignedRequest struct {

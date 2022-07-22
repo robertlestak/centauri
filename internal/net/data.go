@@ -10,8 +10,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/robertlestak/centauri/internal/keys"
 	"github.com/robertlestak/centauri/internal/persist"
+	"github.com/robertlestak/centauri/pkg/keys"
 	log "github.com/sirupsen/logrus"
 )
 

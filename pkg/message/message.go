@@ -8,9 +8,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/robertlestak/centauri/internal/events"
-	"github.com/robertlestak/centauri/internal/keys"
 	"github.com/robertlestak/centauri/internal/net"
 	"github.com/robertlestak/centauri/internal/persist"
+	"github.com/robertlestak/centauri/pkg/keys"
 	log "github.com/sirupsen/logrus"
 )
 

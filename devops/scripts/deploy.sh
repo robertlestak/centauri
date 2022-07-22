@@ -1,6 +1,17 @@
 #!/bin/bash
 set -e
 
+BUILDER=b-`uuidgen`
+
+cleanup() {
+  docker buildx rm $BUILDER
+}
+
+trap cleanup EXIT
+
+docker buildx create --use --name $BUILDER
+docker buildx inspect --bootstrap
+
 IMAGE=registry.lestak.sh/centaurid
 TAG=$GIT_COMMIT
 
