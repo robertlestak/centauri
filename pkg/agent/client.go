@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"text/tabwriter"
 	"time"
 
 	"github.com/robertlestak/centauri/pkg/keys"
@@ -40,12 +42,16 @@ func sendOutput(data []byte, out string) error {
 
 func messageListTable(msgs []MessageMeta) string {
 	var tbl string
-	tbl += "ID\tChannel\tSize\tCreatedAt\n"
+	var wr bytes.Buffer
+	w := tabwriter.NewWriter(&wr, 1, 1, 1, ' ', 0)
+	fmt.Fprintf(w, "id\tchannel\tsize\tcreated at\n")
 	for _, msg := range msgs {
 		strTime := msg.CreatedAt.Format(time.RFC3339)
-		tbl += msg.ID + "\t" + msg.Channel + "\t" + strconv.Itoa(int(msg.Size)) + "\t" + strTime + "\n"
+		tbl += msg.ID + "\t" + msg.Channel + "\t" + strconv.Itoa(int(msg.Size)) + "\t" + strTime
+		fmt.Fprintf(w, "%s\n", tbl)
 	}
-	return tbl
+	w.Flush()
+	return wr.String()
 }
 
 func listMessages(channel string, format string, out string) error {
