@@ -8,8 +8,10 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/memberlist"
 	"github.com/robertlestak/centauri/internal/cfg"
 	"github.com/robertlestak/centauri/internal/events"
 	"github.com/robertlestak/centauri/internal/net"
@@ -134,6 +136,36 @@ func loadcfg() {
 	}
 }
 
+func peerWatcher() {
+	l := log.WithFields(log.Fields{
+		"pkg": "centaurid",
+		"fn":  "peerWatcher",
+	})
+	l.Debug("starting")
+	for {
+		time.Sleep(time.Second * 30)
+		l.Debug("checking for peers")
+		var err error
+		var liveNodes int
+		for _, n := range net.ListMembers() {
+			if n.Name == cfg.Config.Peer.Name {
+				continue
+			}
+			if n.State == memberlist.StateAlive {
+				liveNodes++
+			}
+		}
+		if liveNodes == 0 && len(cfg.Config.Peer.PeerAddrs) > 0 {
+			l.Debug("no peers, trying to join")
+			err = net.Join(cfg.Config.Peer.PeerAddrs)
+			if err != nil {
+				l.Errorf("failed: %v", err)
+				os.Exit(1)
+			}
+		}
+	}
+}
+
 func peer() {
 	l := log.WithFields(log.Fields{
 		"pkg": "main",
@@ -197,6 +229,7 @@ func peer() {
 	net.CreateQueue()
 	go net.DataServer(cfg.Config.Peer.DataBindPort)
 	go net.CacheCleaner()
+	go peerWatcher()
 	go persist.TimeoutCleaner()
 	// DeletionHandlers are called when a file is deleted on this peer
 	// these will notify other peers to delete the file locally
